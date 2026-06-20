@@ -1,0 +1,139 @@
+import React, { useState } from 'react';
+import {
+  Zap, BarChart3, ArrowRight, Info, History,
+} from 'lucide-react';
+import {
+  Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, Cell, Tooltip,
+} from 'recharts';
+import Button from '../../components/common/Button';
+import { cn } from '../../utils/cn';
+
+const radarData = [
+  { subject: 'GPA', A: 95 },
+  { subject: 'GRE', A: 85 },
+  { subject: 'Research', A: 40 },
+  { subject: 'IELTS', A: 90 },
+  { subject: 'Experience', A: 60 },
+];
+
+const AdmissionPrediction = () => {
+  const [state, setState] = useState('idle'); // idle | calculating | result
+
+  const handlePredict = () => {
+    setState('calculating');
+    setTimeout(() => setState('result'), 2200);
+  };
+
+  return (
+    <div className="space-y-8 pb-12">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Admission Predictor</h2>
+          <p className="text-gray-500 mt-1">ML-driven probability analysis for your target programs.</p>
+        </div>
+        <Button variant="outline" className="gap-2 rounded-xl">
+          <History className="h-4 w-4" /> View History
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Input panel */}
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-5">
+          <h4 className="text-lg font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 pb-4 flex items-center gap-2">
+            <Zap className="h-5 w-5 text-blue-500" /> Analysis Inputs
+          </h4>
+          {[
+            { label: 'CGPA', value: '3.85 / 4.0' },
+            { label: 'GRE Score', value: '324' },
+            { label: 'Work Exp.', value: '24 Months' },
+            { label: 'Program Strength', value: 'High', highlight: true },
+          ].map((item) => (
+            <div key={item.label} className="flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl">
+              <span className="text-sm font-medium text-gray-500">{item.label}</span>
+              <span className={cn('font-bold', item.highlight ? 'text-emerald-500' : 'text-gray-900 dark:text-white')}>
+                {item.value}
+              </span>
+            </div>
+          ))}
+
+          <div className="pt-4">
+            <Button className="w-full py-6 text-lg rounded-2xl gap-3" onClick={handlePredict} isLoading={state === 'calculating'}>
+              Analyze Probability <ArrowRight className="h-5 w-5" />
+            </Button>
+            <p className="text-[10px] text-center text-gray-400 mt-3 uppercase tracking-widest font-bold">
+              Powered by Predictive Analytics + GPT-4o
+            </p>
+          </div>
+        </div>
+
+        {/* Results */}
+        <div className="lg:col-span-2 space-y-6">
+          {state === 'idle' && (
+            <div className="h-full min-h-[400px] flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-3xl p-12 text-center bg-gray-50/50 dark:bg-gray-900/20">
+              <BarChart3 className="h-14 w-14 text-gray-200 dark:text-gray-700 mb-4" />
+              <h3 className="text-lg font-bold text-gray-400">Ready for Analysis</h3>
+              <p className="text-gray-400 text-sm max-w-xs mt-2">
+                Click "Analyze Probability" to run your profile against our university database.
+              </p>
+            </div>
+          )}
+
+          {state === 'result' && (
+            <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {/* Score */}
+                <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Result</span>
+                    <span className="px-3 py-1 bg-amber-100 text-amber-600 rounded-full text-[10px] font-black uppercase">MODERATE</span>
+                  </div>
+                  <h3 className="text-5xl font-black text-amber-500">62.4%</h3>
+                  <p className="text-sm text-gray-400 mt-1">Admission Probability</p>
+                  <p className="text-sm italic text-gray-600 dark:text-gray-300 mt-4 leading-relaxed">
+                    "Your GRE and GPA are strong offsets for limited research experience. Your SOP will be decisive."
+                  </p>
+                </div>
+
+                {/* Radar */}
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col items-center">
+                  <p className="text-xs font-bold text-gray-400 uppercase mb-2">Competency Map</p>
+                  <div className="h-[200px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+                        <PolarGrid stroke="#e5e7eb" />
+                        <PolarAngleAxis dataKey="subject" tick={{ fill: '#9ca3af', fontSize: 11 }} />
+                        <Radar name="Student" dataKey="A" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.5} />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bar breakdown */}
+              <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm">
+                <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Competitive Landscape</h4>
+                <div className="h-[220px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={radarData}>
+                      <XAxis dataKey="subject" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                      <YAxis hide />
+                      <Tooltip cursor={{ fill: 'transparent' }} />
+                      <Bar dataKey="A" radius={[8, 8, 8, 8]} barSize={44}>
+                        {radarData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#3b82f6' : '#e2e8f0'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AdmissionPrediction;
