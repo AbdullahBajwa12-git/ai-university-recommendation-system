@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { 
   Sparkles, History, Bookmark, Search,
   Download, FileText, BarChart3, ArrowRight,
-  TrendingUp, SlidersHorizontal, Trash2
+  TrendingUp, SlidersHorizontal, Trash2, Clock, RotateCcw, X
 } from 'lucide-react';
 import { useRecommendations } from '../../hooks/useRecommendations';
+import { useSearchHistory } from '../../hooks/useSearchHistory';
 import UniversityFinderModal from '../../components/modals/UniversityFinderModal';
 import UniversityResultCard from '../../components/cards/UniversityResultCard';
 import CompareModal from '../../components/modals/CompareModal';
@@ -23,25 +24,62 @@ const FindUniversities = () => {
     unsaveUniversity, 
     isSaving,
     isLoadingHistory,
-    isLoadingSaved
+    isLoadingSaved,
+    getSessionDetails,
   } = useRecommendations();
+
+  const { localHistory, saveToHistory, removeFromHistory, clearHistory } = useSearchHistory();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeResults, setActiveResults] = useState(null);
   const [comparingItems, setComparingItems] = useState([]);
   const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('new'); // 'new', 'history', 'saved'
+  const [prefillData, setPrefillData] = useState(null);  // form data from history
+  const [loadingHistoryItem, setLoadingHistoryItem] = useState(null); // session_id being loaded
+  const [historyTab, setHistoryTab] = useState('local'); // 'local' | 'remote'
 
   const handleFormSubmit = async (data) => {
     try {
       const results = await getRecommendations(data);
       if (results) {
+        // ✅ Persist the inputs to localStorage history
+        saveToHistory(data);
         setActiveResults(results);
         setViewMode('new');
         setIsModalOpen(false);
+        setPrefillData(null);
       }
     } catch (error) {
       console.error("Failed to get recommendations:", error);
+    }
+  };
+
+  // Open the modal pre-filled with a local history item
+  const handleLocalHistoryClick = (entry) => {
+    const profile = { ...entry.data };
+    if (!Array.isArray(profile.continents)) profile.continents = [];
+    if (!Array.isArray(profile.countries)) profile.countries = [];
+    setPrefillData(profile);
+    setIsModalOpen(true);
+  };
+
+  // Click a remote (API) history item → fetch full session → pre-fill the modal form
+  const handleHistoryClick = async (session) => {
+    setLoadingHistoryItem(session.session_id);
+    try {
+      const details = await getSessionDetails(session.session_id);
+      const profile = details.student_profile || {};
+      if (!Array.isArray(profile.continents)) profile.continents = [];
+      if (!Array.isArray(profile.countries)) profile.countries = [];
+      setPrefillData(profile);
+      setActiveResults(details);
+      setViewMode('new');
+      setIsModalOpen(true);
+    } catch (e) {
+      import('react-hot-toast').then(({ toast }) => toast.error('Failed to load search history'));
+    } finally {
+      setLoadingHistoryItem(null);
     }
   };
 
@@ -103,6 +141,18 @@ const FindUniversities = () => {
     return [];
   };
 
+  // Format a timestamp as a relative string
+  const formatRelativeTime = (iso) => {
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    const hrs = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    if (mins < 2) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${days}d ago`;
+  };
+
   return (
     <div className="relative space-y-8 pb-32">
       {/* AI Generating Overlay */}
@@ -132,7 +182,7 @@ const FindUniversities = () => {
             <Bookmark className="h-4 w-4" /> Saved {saved.length > 0 && `(${saved.length})`}
           </Button>
           <Button 
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => { setPrefillData(null); setIsModalOpen(true); }}
             className="gap-2 px-8 rounded-2xl shadow-xl shadow-primary/20 bg-gradient-to-br from-primary to-indigo-600"
           >
             <Sparkles className="h-5 w-5" /> Find Universities
@@ -143,30 +193,146 @@ const FindUniversities = () => {
       {/* Main Content Area */}
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
         
-        {/* Left Sidebar: Filters/Status/History */}
+        {/* Left Sidebar: Search History */}
         <div className="space-y-6">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-[2rem] border border-gray-100 dark:border-gray-700">
-            <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2">
-              <History className="h-4 w-4" /> Search History
-            </h3>
-            {isLoadingHistory ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map(i => <div key={i} className="h-12 bg-gray-100 dark:bg-gray-700 animate-pulse rounded-xl" />)}
-              </div>
-            ) : history.length > 0 ? (
-              <div className="space-y-2">
-                {history.map(session => (
-                   <button 
-                    key={session.session_id} 
-                    className="w-full text-left p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group"
-                  >
-                    <p className="text-xs font-bold text-gray-900 dark:text-white line-clamp-1">{session.intended_major} in {session.degree_applying_for}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">{new Date(session.created_at).toLocaleDateString()} • {session.total_count} results</p>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-500 italic">No previous searches yet.</p>
+            {/* History Tab Toggle */}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
+                <History className="h-4 w-4" /> Search History
+              </h3>
+              {localHistory.length > 0 && historyTab === 'local' && (
+                <button
+                  onClick={clearHistory}
+                  title="Clear all local history"
+                  className="text-[10px] text-red-400 hover:text-red-600 font-bold uppercase tracking-wide flex items-center gap-1 transition-colors"
+                >
+                  <Trash2 className="h-3 w-3" /> Clear
+                </button>
+              )}
+            </div>
+
+            {/* Tab bar */}
+            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-xl p-1 mb-4 gap-1">
+              <button
+                onClick={() => setHistoryTab('local')}
+                className={cn(
+                  "flex-1 text-[10px] font-black uppercase tracking-widest py-1.5 rounded-lg transition-all",
+                  historyTab === 'local'
+                    ? "bg-white dark:bg-gray-600 shadow text-gray-900 dark:text-white"
+                    : "text-gray-400 hover:text-gray-600"
+                )}
+              >
+                <Clock className="h-3 w-3 inline mr-1" />Recent
+              </button>
+              <button
+                onClick={() => setHistoryTab('remote')}
+                className={cn(
+                  "flex-1 text-[10px] font-black uppercase tracking-widest py-1.5 rounded-lg transition-all",
+                  historyTab === 'remote'
+                    ? "bg-white dark:bg-gray-600 shadow text-gray-900 dark:text-white"
+                    : "text-gray-400 hover:text-gray-600"
+                )}
+              >
+                <History className="h-3 w-3 inline mr-1" />All
+              </button>
+            </div>
+
+            {/* LOCAL History Tab */}
+            {historyTab === 'local' && (
+              <>
+                {localHistory.length > 0 ? (
+                  <div className="space-y-2">
+                    {localHistory.map((entry) => (
+                      <div
+                        key={entry.id}
+                        className="group relative flex items-start gap-2 p-3 rounded-xl border border-transparent hover:border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all cursor-pointer"
+                        onClick={() => handleLocalHistoryClick(entry)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-gray-900 dark:text-white line-clamp-1 group-hover:text-indigo-600 transition-colors">
+                            {entry.label}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {entry.data?.cgpa && (
+                              <span className="text-[9px] bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 font-bold px-1.5 py-0.5 rounded-full">
+                                CGPA {entry.data.cgpa}
+                              </span>
+                            )}
+                            {entry.data?.country && (
+                              <span className="text-[9px] text-gray-400 font-medium">
+                                {entry.data.country}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
+                            <Clock className="h-2.5 w-2.5" />
+                            {formatRelativeTime(entry.timestamp)}
+                          </p>
+                          <p className="text-[10px] text-indigo-500 font-bold mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                            <RotateCcw className="h-2.5 w-2.5" /> Re-fill form ↗
+                          </p>
+                        </div>
+                        {/* Remove button */}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removeFromHistory(entry.id); }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-gray-300 hover:text-red-400"
+                          title="Remove"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <div className="h-10 w-10 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Search className="h-5 w-5 text-gray-300" />
+                    </div>
+                    <p className="text-xs text-gray-500 italic">No searches yet.</p>
+                    <p className="text-[10px] text-gray-400 mt-1">Your searches will appear here for quick re-use.</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* REMOTE (API) History Tab */}
+            {historyTab === 'remote' && (
+              <>
+                {isLoadingHistory ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map(i => <div key={i} className="h-12 bg-gray-100 dark:bg-gray-700 animate-pulse rounded-xl" />)}
+                  </div>
+                ) : history.length > 0 ? (
+                  <div className="space-y-2">
+                    {history.map(session => (
+                      <button 
+                        key={session.session_id} 
+                        onClick={() => handleHistoryClick(session)}
+                        disabled={loadingHistoryItem === session.session_id}
+                        className="w-full text-left p-3 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-200 border border-transparent transition-all group relative"
+                      >
+                        {loadingHistoryItem === session.session_id && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-white/70 dark:bg-gray-800/70 rounded-xl">
+                            <div className="h-4 w-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        )}
+                        <p className="text-xs font-bold text-gray-900 dark:text-white line-clamp-1 group-hover:text-indigo-600 transition-colors">
+                          {session.intended_major || 'Any Major'} · {session.degree_applying_for || 'Any Degree'}
+                        </p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">
+                          {new Date(session.created_at).toLocaleDateString()} • {session.total_count} results
+                        </p>
+                        <p className="text-[10px] text-indigo-400 font-bold mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          Click to restore & rerun ↗
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500 italic">No previous searches yet.</p>
+                )}
+              </>
             )}
           </div>
 
@@ -258,7 +424,7 @@ const FindUniversities = () => {
                <h2 className="text-3xl font-black mb-4">You haven't run a search yet</h2>
                <p className="text-gray-500 mb-10 max-w-md mx-auto">Complete our 6-step wizard to see AI-powered university matches tailored exactly to your profile.</p>
                <Button 
-                onClick={() => setIsModalOpen(true)}
+                onClick={() => { setPrefillData(null); setIsModalOpen(true); }}
                 className="rounded-2xl px-12 h-14 text-lg bg-gradient-to-br from-primary to-indigo-600 shadow-2xl shadow-primary/30"
                >
                 Start Free Evaluation
@@ -272,9 +438,10 @@ const FindUniversities = () => {
       {/* Modals */}
       <UniversityFinderModal 
         isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+        onClose={() => { setIsModalOpen(false); setPrefillData(null); }} 
         onSubmit={handleFormSubmit}
         isLoading={isGenerating}
+        initialData={prefillData}
       />
 
       <CompareModal 

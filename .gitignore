@@ -1,24 +1,32 @@
 # Environment files
 .env
+.env.*
 *.env
+!.env.example
+!frontend/.env.example
 
-# Python
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+build/
+
+# Python / Backend
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
 .Python
 *.egg-info/
-dist/
-build/
 .eggs/
 *.egg
 .venv/
 venv/
 env/
 
-# Alembic
-# (keep versions tracked, exclude pyc inside)
+# Docker / runtime logs
+*.log
 
 # IDE
 .vscode/

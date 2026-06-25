@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { 
   X, ChevronRight, ChevronLeft, User, GraduationCap, 
   MapPin, Globe, DollarSign, Languages, BrainCircuit,
-  Search, CheckCircle2, AlertCircle
+  Search, CheckCircle2, AlertCircle, RotateCcw
 } from 'lucide-react';
 import Button from '../common/Button';
 import Input from '../common/Input';
@@ -18,23 +18,35 @@ const STEPS = [
   { id: 6, title: 'Prefs', icon: CheckCircle2 }
 ];
 
-const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
+const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialData }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm({
-    defaultValues: {
-      continents: [],
-      countries: [],
-      degree_completed: false,
-      need_scholarship: false,
-      fully_funded_required: false,
-      partial_scholarship_accepted: true,
-      public_only: false,
-      private_allowed: true,
-      research_focused: false,
-      industry_focused: false,
-      top_ranked_only: false,
-    }
+
+  const defaultVals = {
+    continents: [],
+    countries: [],
+    degree_completed: false,
+    need_scholarship: false,
+    fully_funded_required: false,
+    partial_scholarship_accepted: true,
+    public_only: false,
+    private_allowed: true,
+    research_focused: false,
+    industry_focused: false,
+    top_ranked_only: false,
+    ...initialData,
+  };
+
+  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm({
+    defaultValues: defaultVals,
   });
+
+  // Re-populate form whenever initialData changes (new history item clicked)
+  React.useEffect(() => {
+    if (initialData) {
+      reset({ ...defaultVals, ...initialData });
+      setCurrentStep(1);
+    }
+  }, [initialData]); // eslint-disable-line
 
   if (!isOpen) return null;
 
@@ -378,6 +390,19 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading }) => {
               <X className="h-5 w-5" />
             </button>
           </div>
+
+          {/* Pre-fill banner — shown when opening from search history */}
+          {initialData && (
+            <div className="mx-6 mt-4 flex items-center gap-3 px-4 py-3 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="h-8 w-8 shrink-0 rounded-full bg-indigo-500 flex items-center justify-center text-white">
+                <RotateCcw className="h-4 w-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-black text-indigo-700 dark:text-indigo-300">Form pre-filled from your search history</p>
+                <p className="text-[10px] text-indigo-500 dark:text-indigo-400 mt-0.5">Review the details across all steps, then submit to get fresh recommendations.</p>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit(handleFormSubmit)} className="flex-1 flex flex-col p-8 overflow-y-auto custom-scrollbar">
             {renderStep()}

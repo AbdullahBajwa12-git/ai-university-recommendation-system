@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from pydantic import BaseModel, EmailStr, model_validator
 from typing import Optional, List, Any, Dict
 from datetime import datetime
 from uuid import UUID
@@ -142,7 +142,7 @@ class RecommendationResponse(BaseModel):
 # ── Session History Schemas ──────────────────────────────────────────────────
 
 class RecommendationHistoryItem(BaseModel):
-    session_id: UUID
+    session_id: str
     intended_major: Optional[str] = None
     degree_applying_for: Optional[str] = None
     total_count: int

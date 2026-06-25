@@ -3,10 +3,8 @@ import json
 import httpx
 from contextlib import asynccontextmanager
 from typing import List
-from uuid import UUID
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from datetime import datetime
 from beanie import PydanticObjectId
 
 import models
@@ -164,10 +162,25 @@ SYSTEM_PROMPT = (
     "Given a student's profile, recommend a diverse list of at least 10 universities. "
     "Include a mix of SAFE, TARGET, and REACH universities. "
     "Even for weak profiles, include top global universities (Ivy League, Top 100 QS) as REACH options with low chances (5-20%). "
-    "For each university, provide: university name, contact email, admission chances (as a percentage 0-100), "
-    "a brief reason why it matches, and the application deadline. "
+    "For each university provide the following information: "
+    "university name, country, official website URL (e.g. https://www.mit.edu), "
+    "direct admissions page URL (e.g. https://admissions.mit.edu), "
+    "the real official admissions contact email address of the university (e.g. admissions@mit.edu), "
+    "admission chances as a percentage (0-100), "
+    "a DETAILED reason why it matches this specific student (see instructions below), "
+    "and the application deadline (specific month and day, e.g. January 15 or December 1). "
     "Output ONLY valid JSON with a top-level key 'universities' containing an array. "
-    "Each object must have exactly these fields: 'name', 'email', 'chances' (integer), 'reason', 'deadline'."
+    "Each object must have exactly these fields: "
+    "'name' (string), 'country' (string), 'website' (string, full https URL of official homepage), "
+    "'admissions_url' (string, full https URL of the admissions/apply page), "
+    "'email' (string, real official admissions email address like admissions@university.edu), "
+    "'chances' (integer 0-100), 'reason' (string), 'deadline' (string). "
+    "IMPORTANT — 'reason' must be 3-5 sentences that EXPLICITLY reference the student's actual credentials: "
+    "mention their CGPA, relevant test scores (IELTS/GRE/GMAT if provided), intended major, research or work experience, "
+    "and explain concretely WHY this university is a good fit (e.g. strong program ranking, research labs, scholarships, acceptance rate). "
+    "Do NOT write a generic reason — it must be personalised to the student's profile. "
+    "IMPORTANT: website, admissions_url, and email must be real and accurate — never null, never empty, never fabricated. "
+    "IMPORTANT: deadline must be a real, accurate application deadline for the program (e.g. 'January 15' or 'December 1') — never null or empty."
 )
 
 @app.post("/api/v1/ai/recommend", response_model=schemas.RecommendationResponse)
@@ -231,21 +244,25 @@ Recommend at least 10 universities. Include SAFE, TARGET and REACH options.
 
         raw_unis = data.get("universities", [])
 
-        # Map bnn.py fields → our schema fields
+        # Map AI fields → our schema fields
         universities = []
         for u in raw_unis:
+            uni_name = u.get("name", "Unknown University")
+            # Use real AI-returned URLs; fall back to Google search only if truly missing
+            name_encoded = uni_name.replace(" ", "+")
+            website = u.get("website") or f"https://www.google.com/search?q={name_encoded}+official+site"
             universities.append({
-                "university_name":    u.get("name", "Unknown University"),
+                "university_name":    uni_name,
                 "country":            u.get("country", "N/A"),
                 "degree":             p.get("degree_applying_for", "N/A"),
                 "major":              p.get("intended_major", "N/A"),
                 "admission_chance":   float(u.get("chances", 50)),
                 "world_rank":         u.get("world_rank") or u.get("rank"),
                 "scholarship_available": u.get("scholarship_available"),
-                "university_email":   u.get("email"),
-                "university_website": u.get("website"),
-                "description":        u.get("deadline", ""),
-                "reason_for_match":   u.get("reason", ""),
+                "university_email":   u.get("email") or "",      # real admissions email address
+                "university_website": website,                    # real official website URL
+                "description":        u.get("deadline", ""),      # application deadline (shown as 'Deadline: ...' on card)
+                "reason_for_match":   u.get("reason", ""),        # detailed, student-specific match reason
             })
 
         session = models.RecommendationSession(

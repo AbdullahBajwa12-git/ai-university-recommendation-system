@@ -1,29 +1,51 @@
-version: '3.8'
+
 
 services:
+
+  # ── MongoDB ─────────────────────────────────────────────────────────────────
   db:
-    image: mongo:latest
+    image: mongo:7.0
     container_name: mongodb_fyp
+    restart: unless-stopped
     ports:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
+  # ── Backend (FastAPI) ────────────────────────────────────────────────────────
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: backend_fyp
+    restart: unless-stopped
     ports:
       - "8000:8000"
     env_file:
       - .env
     environment:
-      - MONGODB_URL=mongodb://db:27017
+      - MONGODB_URL=mongodb://db:27017     # Override local URL with Docker service name
+    volumes:
+      - ./backend:/app                     # ← Hot-reload: mounts your local backend folder
     depends_on:
-      - db
+      db:
+        condition: service_healthy         # Wait until MongoDB is truly ready
 
+  # ── Frontend (React + Vite → Nginx) ─────────────────────────────────────────
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:8000/api/v1   # Baked into the Vite build
     container_name: frontend_fyp
+    restart: unless-stopped
     ports:
       - "5173:80"
     depends_on:

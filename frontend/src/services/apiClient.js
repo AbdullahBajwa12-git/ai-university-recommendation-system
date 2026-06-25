@@ -19,35 +19,19 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor for Token Refresh
+// Response Interceptor — redirect to login on 401
 apiClient.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      
-      try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        const response = await axios.post(`${apiClient.defaults.baseURL}/auth/refresh`, {
-          refresh_token: refreshToken,
-        });
-        
-        const { access_token } = response.data;
-        localStorage.setItem('token', access_token);
-        
-        apiClient.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-        return apiClient(originalRequest);
-      } catch (refreshError) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token is invalid or expired — clear session and redirect
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      if (window.location.pathname !== '/login') {
         window.location.href = '/login';
-        return Promise.reject(refreshError);
       }
     }
-    
     return Promise.reject(error);
   }
 );

@@ -7,6 +7,7 @@ import {
   Sparkles,
   CheckCircle2,
   AlertCircle,
+  History,
 } from 'lucide-react';
 import {
   BarChart,
@@ -18,6 +19,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useAuth } from '../../context/AuthContext';
+import { useRecommendations } from '../../hooks/useRecommendations';
 import { cn } from '../../utils/cn';
 
 const data = [
@@ -26,12 +28,6 @@ const data = [
   { name: 'Uni C', probability: 45 },
   { name: 'Uni D', probability: 92 },
   { name: 'Uni E', probability: 30 },
-];
-
-const activity = [
-  { id: 1, text: 'Generated prediction for MIT', time: '2 hours ago' },
-  { id: 2, text: 'Saved Stanford University', time: '5 hours ago' },
-  { id: 3, text: 'Applied to University of Waterloo', time: '1 day ago' },
 ];
 
 const StatCard = ({ title, value, subtext, icon: Icon, colorClass }) => (
@@ -50,6 +46,10 @@ const StatCard = ({ title, value, subtext, icon: Icon, colorClass }) => (
 const Dashboard = () => {
   const { user } = useAuth();
   const firstName = user?.full_name?.split(' ')[0] || 'Student';
+  const { history, saved, isLoadingHistory } = useRecommendations();
+
+  // Last 3 searches for the activity panel
+  const recentSearches = history.slice(0, 3);
 
   return (
     <div className="space-y-8 pb-12">
@@ -102,22 +102,37 @@ const Dashboard = () => {
 
         {/* Activity Timeline */}
         <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
-          <h3 className="text-lg font-bold mb-6 text-gray-900 dark:text-white">Recent Activity</h3>
+          <h3 className="text-lg font-bold mb-6 text-gray-900 dark:text-white flex items-center gap-2">
+            <History className="h-5 w-5 text-indigo-500" /> Recent Searches
+          </h3>
           <div className="space-y-6">
-            {activity.map((item, i) => (
-              <div key={item.id} className="relative pl-8">
-                {i < activity.length - 1 && (
-                  <div className="absolute left-[9px] top-4 bottom-[-20px] w-[2px] bg-gray-100 dark:bg-gray-700" />
-                )}
-                <div className="absolute left-0 top-1 h-[18px] w-[18px] rounded-full bg-blue-500 border-4 border-white dark:border-gray-800" />
-                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{item.text}</p>
-                <p className="text-xs text-gray-400 mt-1">{item.time}</p>
-              </div>
-            ))}
+            {isLoadingHistory ? (
+              [1,2,3].map(i => <div key={i} className="h-10 bg-gray-100 dark:bg-gray-700 animate-pulse rounded-xl" />)
+            ) : recentSearches.length > 0 ? (
+              recentSearches.map((session, i) => (
+                <div key={session.session_id} className="relative pl-8">
+                  {i < recentSearches.length - 1 && (
+                    <div className="absolute left-[9px] top-4 bottom-[-20px] w-[2px] bg-gray-100 dark:bg-gray-700" />
+                  )}
+                  <div className="absolute left-0 top-1 h-[18px] w-[18px] rounded-full bg-indigo-500 border-4 border-white dark:border-gray-800" />
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200 line-clamp-1">
+                    {session.intended_major || 'Any Major'} · {session.degree_applying_for || 'Any Degree'}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {new Date(session.created_at).toLocaleDateString()} • {session.total_count} universities found
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-gray-400 italic">No searches yet. Start your first recommendation!</p>
+            )}
           </div>
-          <button className="w-full mt-8 py-3 text-sm font-semibold text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-colors border border-blue-200 dark:border-blue-800 border-dashed">
+          <Link 
+            to="/find-universities"
+            className="block w-full mt-8 py-3 text-sm font-semibold text-center text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-colors border border-blue-200 dark:border-blue-800 border-dashed"
+          >
             View All History
-          </button>
+          </Link>
         </div>
       </div>
 

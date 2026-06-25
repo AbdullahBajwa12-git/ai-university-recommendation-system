@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Trophy, Check, MapPin, GraduationCap, DollarSign, BrainCircuit } from 'lucide-react';
+import { X, Check } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 const CompareModal = ({ isOpen, onClose, universities }) => {

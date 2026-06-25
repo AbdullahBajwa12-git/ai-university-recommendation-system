@@ -1,4 +1,4 @@
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Annotated
 from datetime import datetime
 from uuid import UUID, uuid4
 from beanie import Document, Link, Indexed
@@ -168,7 +168,7 @@ class FieldOfStudy(Document):
 # ── UNIVERSITIES ────────────────────────────────────────────────────────────
 
 class University(Document):
-    university_name: Indexed(str)
+    university_name: Annotated[str, Indexed()]
     country: Link[Country]
     qs_ranking: Optional[int] = None
     website: Optional[str] = None

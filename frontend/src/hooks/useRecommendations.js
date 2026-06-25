@@ -53,6 +53,11 @@ export const useRecommendations = () => {
     },
   });
 
+  // Fetch full session details — returns student_profile (all form inputs) + universities
+  const getSessionDetails = async (sessionId) => {
+    return await recommendationService.getSessionDetails(sessionId);
+  };
+
   return {
     history: historyQuery.data || [],
     isLoadingHistory: historyQuery.isLoading,
@@ -63,5 +68,6 @@ export const useRecommendations = () => {
     saveUniversity: saveUniversityMutation.mutate,
     isSaving: saveUniversityMutation.isPending,
     unsaveUniversity: unsaveUniversityMutation.mutate,
+    getSessionDetails,
   };
 };
