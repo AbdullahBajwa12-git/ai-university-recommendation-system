@@ -7,6 +7,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from beanie import PydanticObjectId
 from uuid import UUID
+from datetime import datetime, timedelta
 
 import models
 import schemas
@@ -92,6 +93,88 @@ async def admin_stats(current_admin: models.User = Depends(auth.get_current_admi
 async def admin_users(current_admin: models.User = Depends(auth.get_current_admin)):
     # AdminUserOut omits password_hash and any credential fields.
     return await models.User.find_all().sort(-models.User.created_at).to_list()
+
+@app.patch("/api/v1/admin/users/{user_id}", response_model=schemas.AdminUserOut)
+async def admin_update_user(
+    user_id: UUID,
+    update: schemas.AdminUserUpdate,
+    current_admin: models.User = Depends(auth.get_current_admin),
+):
+    user = await models.User.find_one(models.User.id == user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    data = update.model_dump(exclude_unset=True)
+
+    # Validate role is one of the allowed values.
+    if data.get("role") is not None and data["role"] not in ("student", "admin"):
+        raise HTTPException(status_code=400, detail="Role must be 'student' or 'admin'")
+
+    # Guard against an admin locking themselves out of the admin area.
+    if user.id == current_admin.id:
+        if data.get("is_active") is False:
+            raise HTTPException(status_code=400, detail="You cannot deactivate your own account")
+        if data.get("role") is not None and data["role"] != "admin":
+            raise HTTPException(status_code=400, detail="You cannot change your own role")
+
+    if data:
+        await user.set(data)
+    return user
+
+@app.get("/api/v1/admin/analytics", response_model=schemas.AdminAnalytics)
+async def admin_analytics(current_admin: models.User = Depends(auth.get_current_admin)):
+    # Simple, Motor-safe analytics: load lists and group in Python (no aggregation pipelines).
+    users = await models.User.find_all().to_list()
+    students = sum(1 for u in users if u.role == "student")
+    admins = sum(1 for u in users if u.role == "admin")
+    active = sum(1 for u in users if u.is_active)
+    inactive = sum(1 for u in users if not u.is_active)
+
+    # Recommendation sessions per day for the last 7 days (oldest → newest).
+    sessions = await models.RecommendationSession.find_all().to_list()
+    today = datetime.utcnow().date()
+    day_list = [today - timedelta(days=i) for i in range(6, -1, -1)]
+    day_counts = {d.isoformat(): 0 for d in day_list}
+    for s in sessions:
+        if getattr(s, "created_at", None):
+            key = s.created_at.date().isoformat()
+            if key in day_counts:
+                day_counts[key] += 1
+    sessions_by_day = [{"date": d.isoformat(), "count": day_counts[d.isoformat()]} for d in day_list]
+
+    # Universities grouped by country (resolve the Country link via an id→name map).
+    universities = await models.University.find_all().to_list()
+    countries = await models.Country.find_all().to_list()
+    country_map = {str(c.id): c.name for c in countries}
+    country_counts = {}
+    for u in universities:
+        link = getattr(u, "country", None)
+        ref = getattr(link, "ref", None)
+        name = country_map.get(str(ref.id)) if ref is not None else None
+        if name:
+            country_counts[name] = country_counts.get(name, 0) + 1
+    universities_by_country = sorted(
+        [{"country": k, "count": v} for k, v in country_counts.items()],
+        key=lambda x: x["count"], reverse=True,
+    )
+
+    # Most-saved universities (by name; SavedUniversity stores a denormalized name).
+    saved = await models.SavedUniversity.find_all().to_list()
+    saved_counts = {}
+    for sv in saved:
+        saved_counts[sv.university_name] = saved_counts.get(sv.university_name, 0) + 1
+    top_saved_universities = sorted(
+        [{"university_name": k, "count": v} for k, v in saved_counts.items()],
+        key=lambda x: x["count"], reverse=True,
+    )[:5]
+
+    return {
+        "users_by_role": {"students": students, "admins": admins},
+        "users_by_status": {"active": active, "inactive": inactive},
+        "sessions_by_day": sessions_by_day,
+        "universities_by_country": universities_by_country,
+        "top_saved_universities": top_saved_universities,
+    }
 
 # ── STUDENT ENDPOINTS ────────────────────────────────────────────────────────
 

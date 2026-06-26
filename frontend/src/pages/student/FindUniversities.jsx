@@ -10,9 +10,34 @@ import UniversityFinderModal from '../../components/modals/UniversityFinderModal
 import UniversityResultCard from '../../components/cards/UniversityResultCard';
 import CompareModal from '../../components/modals/CompareModal';
 import Button from '../../components/common/Button';
+import profileService from '../../services/profileService';
 import { jsPDF } from 'jspdf';
 import { saveAs } from 'file-saver';
 import { cn } from '../../utils/cn';
+
+// Maps saved StudentProfile/Preferences fields → wizard form field names.
+// Only returns keys that have a usable value, so it merges over defaults
+// without clobbering anything with null/empty.
+const STUDY_LEVEL_TO_DEGREE = { Bachelors: 'BS', Masters: 'MS', PhD: 'PhD' };
+const profileToWizard = (p) => {
+  const out = {};
+  if (p?.cgpa != null) out.cgpa = String(p.cgpa);
+  if (p?.graduation_year != null) out.graduation_year = String(p.graduation_year);
+  if (p?.ielts_score != null) out.ielts = String(p.ielts_score);
+  if (p?.toefl_score != null) out.toefl = String(p.toefl_score);
+  if (p?.gre_score != null) out.gre = String(p.gre_score);
+  if (p?.gmat_score != null) out.gmat = String(p.gmat_score);
+  if (p?.preferred_study_level && STUDY_LEVEL_TO_DEGREE[p.preferred_study_level]) {
+    out.degree_applying_for = STUDY_LEVEL_TO_DEGREE[p.preferred_study_level];
+  }
+  if (Array.isArray(p?.preferred_countries) && p.preferred_countries.length) {
+    out.countries = p.preferred_countries;
+  }
+  if (Array.isArray(p?.preferred_fields) && p.preferred_fields.length) {
+    out.intended_major = p.preferred_fields[0];
+  }
+  return out;
+};
 
 const FindUniversities = () => {
   const { 
@@ -35,9 +60,28 @@ const FindUniversities = () => {
   const [comparingItems, setComparingItems] = useState([]);
   const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('new'); // 'new', 'history', 'saved'
-  const [prefillData, setPrefillData] = useState(null);  // form data from history
+  const [prefillData, setPrefillData] = useState(null);  // form data from history/profile
+  const [prefillSource, setPrefillSource] = useState(null); // 'profile' | 'history' | null
   const [loadingHistoryItem, setLoadingHistoryItem] = useState(null); // session_id being loaded
   const [historyTab, setHistoryTab] = useState('local'); // 'local' | 'remote'
+
+  // Open a fresh wizard, pre-filling from the saved profile/preferences when available.
+  // Profile fetch is best-effort: failure or empty data just opens the default form.
+  const openFreshWizard = async () => {
+    setPrefillData(null);
+    setPrefillSource(null);
+    setIsModalOpen(true);
+    try {
+      const profile = await profileService.getProfile();
+      const mapped = profileToWizard(profile || {});
+      if (Object.keys(mapped).length > 0) {
+        setPrefillData(mapped);
+        setPrefillSource('profile');
+      }
+    } catch {
+      // Ignore — the wizard works fine with default/empty values.
+    }
+  };
 
   const handleFormSubmit = async (data) => {
     try {
@@ -49,6 +93,7 @@ const FindUniversities = () => {
         setViewMode('new');
         setIsModalOpen(false);
         setPrefillData(null);
+        setPrefillSource(null);
       }
     } catch (error) {
       console.error("Failed to get recommendations:", error);
@@ -61,6 +106,7 @@ const FindUniversities = () => {
     if (!Array.isArray(profile.continents)) profile.continents = [];
     if (!Array.isArray(profile.countries)) profile.countries = [];
     setPrefillData(profile);
+    setPrefillSource('history');
     setIsModalOpen(true);
   };
 
@@ -73,6 +119,7 @@ const FindUniversities = () => {
       if (!Array.isArray(profile.continents)) profile.continents = [];
       if (!Array.isArray(profile.countries)) profile.countries = [];
       setPrefillData(profile);
+      setPrefillSource('history');
       setActiveResults(details);
       setViewMode('new');
       setIsModalOpen(true);
@@ -181,8 +228,8 @@ const FindUniversities = () => {
           >
             <Bookmark className="h-4 w-4" /> Saved {saved.length > 0 && `(${saved.length})`}
           </Button>
-          <Button 
-            onClick={() => { setPrefillData(null); setIsModalOpen(true); }}
+          <Button
+            onClick={openFreshWizard}
             className="gap-2 px-8 rounded-2xl shadow-xl shadow-primary/20 bg-gradient-to-br from-primary to-indigo-600"
           >
             <Sparkles className="h-5 w-5" /> Find Universities
@@ -429,8 +476,8 @@ const FindUniversities = () => {
                </div>
                <h2 className="text-3xl font-black mb-4">You haven't run a search yet</h2>
                <p className="text-gray-500 mb-10 max-w-md mx-auto">Complete our 6-step wizard to see AI-powered university matches tailored exactly to your profile.</p>
-               <Button 
-                onClick={() => { setPrefillData(null); setIsModalOpen(true); }}
+               <Button
+                onClick={openFreshWizard}
                 className="rounded-2xl px-12 h-14 text-lg bg-gradient-to-br from-primary to-indigo-600 shadow-2xl shadow-primary/30"
                >
                 Start Free Evaluation
@@ -442,12 +489,13 @@ const FindUniversities = () => {
       </div>
 
       {/* Modals */}
-      <UniversityFinderModal 
-        isOpen={isModalOpen} 
-        onClose={() => { setIsModalOpen(false); setPrefillData(null); }} 
+      <UniversityFinderModal
+        isOpen={isModalOpen}
+        onClose={() => { setIsModalOpen(false); setPrefillData(null); setPrefillSource(null); }}
         onSubmit={handleFormSubmit}
         isLoading={isGenerating}
         initialData={prefillData}
+        prefillSource={prefillSource}
       />
 
       <CompareModal 

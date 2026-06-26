@@ -58,6 +58,19 @@ class AdminUserOut(BaseModel):
     class Config:
         from_attributes = True
 
+class AdminUserUpdate(BaseModel):
+    # Only these fields may be changed by an admin (no email/password here).
+    full_name: Optional[str] = None
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class AdminAnalytics(BaseModel):
+    users_by_role: Dict[str, int]
+    users_by_status: Dict[str, int]
+    sessions_by_day: List[Dict[str, Any]]
+    universities_by_country: List[Dict[str, Any]]
+    top_saved_universities: List[Dict[str, Any]]
+
 # ── Student Profile Schemas ──────────────────────────────────────────────────
 
 class StudentProfileBase(BaseModel):

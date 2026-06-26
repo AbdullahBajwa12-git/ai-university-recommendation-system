@@ -18,7 +18,7 @@ const STEPS = [
   { id: 6, title: 'Prefs', icon: CheckCircle2 }
 ];
 
-const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialData }) => {
+const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialData, prefillSource }) => {
   const [currentStep, setCurrentStep] = useState(1);
 
   const defaultVals = {
@@ -391,14 +391,18 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
             </button>
           </div>
 
-          {/* Pre-fill banner — shown when opening from search history */}
+          {/* Pre-fill banner — source-aware (search history vs saved profile/preferences) */}
           {initialData && (
             <div className="mx-6 mt-4 flex items-center gap-3 px-4 py-3 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 animate-in fade-in slide-in-from-top-2 duration-300">
               <div className="h-8 w-8 shrink-0 rounded-full bg-indigo-500 flex items-center justify-center text-white">
                 <RotateCcw className="h-4 w-4" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-black text-indigo-700 dark:text-indigo-300">Form pre-filled from your search history</p>
+                <p className="text-xs font-black text-indigo-700 dark:text-indigo-300">
+                  {prefillSource === 'profile'
+                    ? 'Some fields were pre-filled from your saved profile/preferences'
+                    : 'Form pre-filled from your search history'}
+                </p>
                 <p className="text-[10px] text-indigo-500 dark:text-indigo-400 mt-0.5">Review the details across all steps, then submit to get fresh recommendations.</p>
               </div>
             </div>
