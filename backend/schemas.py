@@ -36,6 +36,28 @@ class Token(BaseModel):
     token_type: str
     user: User
 
+# ── Admin Schemas ────────────────────────────────────────────────────────────
+
+class AdminStats(BaseModel):
+    total_users: int
+    total_students: int
+    total_admins: int
+    total_universities: int
+    total_saved_universities: int
+    total_recommendation_sessions: int
+
+class AdminUserOut(BaseModel):
+    # Deliberately excludes password_hash and any token/credential fields.
+    id: UUID
+    email: EmailStr
+    full_name: Optional[str] = None
+    role: str
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 # ── Student Profile Schemas ──────────────────────────────────────────────────
 
 class StudentProfileBase(BaseModel):
@@ -50,6 +72,8 @@ class StudentProfileBase(BaseModel):
     budget_min: Optional[int] = None
     budget_max: Optional[int] = None
     preferred_study_level: Optional[str] = None
+    preferred_countries: Optional[List[str]] = None
+    preferred_fields: Optional[List[str]] = None
 
 class StudentProfileCreate(StudentProfileBase):
     user_id: UUID

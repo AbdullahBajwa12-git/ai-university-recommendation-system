@@ -1,20 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Globe, BookOpen, GraduationCap, Wallet, X,
+  Globe, BookOpen, GraduationCap, Wallet, X, Loader2,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import Button from '../../components/common/Button';
-import FutureScopeBanner from '../../components/common/FutureScopeBanner';
 import { cn } from '../../utils/cn';
+import profileService from '../../services/profileService';
 
 const countries = ['USA', 'Canada', 'Germany', 'Australia', 'UK', 'Netherlands', 'Ireland', 'Sweden'];
 const studyLevels = ['Bachelors', 'Masters', 'PhD'];
 const fields = ['Computer Science', 'Data Science', 'Artificial Intelligence', 'Business Analytics', 'Electrical Engineering', 'Biotechnology'];
 
 const Preferences = () => {
-  const [selectedCountries, setSelectedCountries] = useState(['Canada', 'Germany']);
+  const [selectedCountries, setSelectedCountries] = useState([]);
   const [selectedLevel, setSelectedLevel] = useState('Masters');
-  const [selectedFields, setSelectedFields] = useState(['Computer Science']);
+  const [selectedFields, setSelectedFields] = useState([]);
   const [budget, setBudget] = useState(45000);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const data = await profileService.getProfile();
+        if (!active) return;
+        setSelectedCountries(Array.isArray(data.preferred_countries) ? data.preferred_countries : []);
+        setSelectedFields(Array.isArray(data.preferred_fields) ? data.preferred_fields : []);
+        if (data.preferred_study_level) setSelectedLevel(data.preferred_study_level);
+        if (data.budget_max != null) setBudget(data.budget_max);
+      } catch (err) {
+        // 404 = no profile yet: keep defaults. Other errors: notify.
+        if (active && err.response?.status !== 404) toast.error('Failed to load preferences');
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
 
   const toggleCountry = (c) => {
     setSelectedCountries((prev) =>
@@ -28,9 +51,33 @@ const Preferences = () => {
     );
   };
 
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await profileService.updateProfile({
+        preferred_study_level: selectedLevel,
+        budget_max: Number(budget),
+        preferred_countries: selectedCountries,
+        preferred_fields: selectedFields,
+      });
+      toast.success('Preferences saved');
+    } catch {
+      toast.error('Failed to save preferences');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24 text-gray-400">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
-      <FutureScopeBanner message="Saved preferences are a planned feature. Selections here are not stored yet — use the Find Universities wizard to get live AI recommendations from your inputs." />
       <div>
         <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Study Preferences</h2>
         <p className="text-gray-500 mt-1">Customize your preferences to refine AI recommendations.</p>
@@ -162,7 +209,10 @@ const Preferences = () => {
       </div>
 
       <div className="flex justify-end">
-        <Button className="px-12 rounded-2xl">Update Recommendations</Button>
+        <Button className="px-12 rounded-2xl gap-2" onClick={handleSave} disabled={saving}>
+          {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+          {saving ? 'Saving...' : 'Save Preferences'}
+        </Button>
       </div>
     </div>
   );

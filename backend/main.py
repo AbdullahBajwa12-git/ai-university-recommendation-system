@@ -75,6 +75,24 @@ async def login_for_access_token(user_data: schemas.UserLogin):
 async def read_users_me(current_user: models.User = Depends(auth.get_current_user)):
     return current_user
 
+# ── ADMIN ENDPOINTS (read-only; protected by get_current_admin) ───────────────
+
+@app.get("/api/v1/admin/stats", response_model=schemas.AdminStats)
+async def admin_stats(current_admin: models.User = Depends(auth.get_current_admin)):
+    return {
+        "total_users": await models.User.find_all().count(),
+        "total_students": await models.User.find(models.User.role == "student").count(),
+        "total_admins": await models.User.find(models.User.role == "admin").count(),
+        "total_universities": await models.University.find_all().count(),
+        "total_saved_universities": await models.SavedUniversity.find_all().count(),
+        "total_recommendation_sessions": await models.RecommendationSession.find_all().count(),
+    }
+
+@app.get("/api/v1/admin/users", response_model=List[schemas.AdminUserOut])
+async def admin_users(current_admin: models.User = Depends(auth.get_current_admin)):
+    # AdminUserOut omits password_hash and any credential fields.
+    return await models.User.find_all().sort(-models.User.created_at).to_list()
+
 # ── STUDENT ENDPOINTS ────────────────────────────────────────────────────────
 
 @app.get("/api/v1/student/profile", response_model=schemas.StudentProfile)

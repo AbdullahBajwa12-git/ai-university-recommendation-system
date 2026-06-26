@@ -33,6 +33,8 @@ class StudentProfile(Document):
     budget_min: Optional[int] = None
     budget_max: Optional[int] = None
     preferred_study_level: Optional[str] = None
+    preferred_countries: Optional[List[str]] = None
+    preferred_fields: Optional[List[str]] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     class Settings:
