@@ -39,7 +39,7 @@ const StudentLayout = () => {
     { name: 'Profile', path: '/profile', icon: UserCircle },
     { name: 'Preferences', path: '/preferences', icon: SlidersHorizontal },
     { name: 'Discover', path: '/universities', icon: School },
-    { name: 'AI Recommendations', path: '/recommendations', icon: Sparkles },
+    { name: 'AI Recommendations', path: '/find-universities', icon: Sparkles },
     { name: 'Admission Predictor', path: '/predict', icon: TrendingUp },
     { name: 'Resume Analyzer', path: '/resume-analyzer', icon: FileCheck },
     { name: 'SOP Analyzer', path: '/sop-analyzer', icon: FileText },

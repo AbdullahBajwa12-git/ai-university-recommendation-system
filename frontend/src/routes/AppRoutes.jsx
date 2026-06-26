@@ -15,7 +15,6 @@ import Register from '../pages/auth/Register';
 import Dashboard from '../pages/student/Dashboard';
 import Profile from '../pages/student/Profile';
 import Universities from '../pages/student/UniversityDetails';
-import Recommendations from '../pages/student/Recommendations';
 import Preferences from '../pages/student/Preferences';
 import AdmissionPrediction from '../pages/student/AdmissionPrediction';
 import Applications from '../pages/student/Applications';
@@ -46,7 +45,8 @@ const AppRoutes = () => {
           <Route path="/profile" element={<Profile />} />
           <Route path="/preferences" element={<Preferences />} />
           <Route path="/universities" element={<Universities />} />
-          <Route path="/recommendations" element={<Recommendations />} />
+          {/* Mock Recommendations page retired — redirect to the real AI flow */}
+          <Route path="/recommendations" element={<Navigate to="/find-universities" replace />} />
           <Route path="/predict" element={<AdmissionPrediction />} />
           <Route path="/applications" element={<Applications />} />
           <Route path="/resume-analyzer" element={<ResumeAnalyzer />} />
