@@ -22,14 +22,6 @@ import { useAuth } from '../../context/AuthContext';
 import { useRecommendations } from '../../hooks/useRecommendations';
 import { cn } from '../../utils/cn';
 
-const data = [
-  { name: 'Uni A', probability: 85 },
-  { name: 'Uni B', probability: 62 },
-  { name: 'Uni C', probability: 45 },
-  { name: 'Uni D', probability: 92 },
-  { name: 'Uni E', probability: 30 },
-];
-
 const StatCard = ({ title, value, subtext, icon: Icon, colorClass }) => (
   <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm flex items-start justify-between">
     <div>
@@ -51,6 +43,19 @@ const Dashboard = () => {
   // Last 3 searches for the activity panel
   const recentSearches = history.slice(0, 3);
 
+  // Real, derived metrics (no fabricated numbers)
+  const savedCount = saved.length;
+  const searchCount = history.length;
+  const totalMatched = history.reduce((sum, s) => sum + (s.total_count || 0), 0);
+  const lastMatchCount = history[0]?.total_count || 0;
+  const chartData = history
+    .slice(0, 6)
+    .reverse()
+    .map((s) => ({
+      name: s.intended_major ? s.intended_major.slice(0, 12) : 'Search',
+      count: s.total_count || 0,
+    }));
+
   return (
     <div className="space-y-8 pb-12">
       {/* Header */}
@@ -65,38 +70,45 @@ const Dashboard = () => {
           <Link to="/find-universities" className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-xl shadow-xl shadow-indigo-500/20 hover:scale-105 transition-all text-sm font-black italic">
             <Sparkles className="h-4 w-4" /> Find Universities Now
           </Link>
-          <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-full border border-blue-200 dark:border-blue-800">
+          <Link to="/profile" className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-full border border-blue-200 dark:border-blue-800 hover:bg-blue-100 transition-colors">
             <TrendingUp className="h-4 w-4 text-blue-600" />
-            <span className="text-sm font-semibold text-blue-600">Profile 85% Complete</span>
-          </div>
+            <span className="text-sm font-semibold text-blue-600">Update Profile</span>
+          </Link>
         </div>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Avg. Probability" value="68%" subtext="+5% from last week" icon={TrendingUp} colorClass="bg-blue-500" />
-        <StatCard title="Universities" value="12" subtext="Saved in your list" icon={Bookmark} colorClass="bg-amber-500" />
-        <StatCard title="Applications" value="4" subtext="2 pending review" icon={FileCheck} colorClass="bg-emerald-500" />
-        <StatCard title="AI Matches" value="24" subtext="New programs found" icon={Sparkles} colorClass="bg-indigo-500" />
+        <StatCard title="Saved Universities" value={savedCount} subtext="In your bookmarks" icon={Bookmark} colorClass="bg-amber-500" />
+        <StatCard title="AI Searches" value={searchCount} subtext="Recommendation runs" icon={Sparkles} colorClass="bg-indigo-500" />
+        <StatCard title="Universities Matched" value={totalMatched} subtext="Across all searches" icon={TrendingUp} colorClass="bg-blue-500" />
+        <StatCard title="Latest Search" value={lastMatchCount} subtext="Matches in your last search" icon={FileCheck} colorClass="bg-emerald-500" />
       </div>
 
       {/* Chart + Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
-          <h3 className="text-lg font-bold mb-6 text-gray-900 dark:text-white">Admission Probabilities</h3>
+          <h3 className="text-lg font-bold mb-6 text-gray-900 dark:text-white">Universities Found per Search</h3>
           <div className="h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} domain={[0, 100]} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#fff', borderColor: '#e5e7eb', borderRadius: '0.75rem' }}
-                  formatter={(val) => [`${val}%`, 'Probability']}
-                />
-                <Bar dataKey="probability" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} allowDecimals={false} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#fff', borderColor: '#e5e7eb', borderRadius: '0.75rem' }}
+                    formatter={(val) => [`${val} universities`, 'Found']}
+                  />
+                  <Bar dataKey="count" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center text-gray-400">
+                <p className="text-sm">No searches yet.</p>
+                <p className="text-xs mt-1">Run a search to see your match history here.</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -144,9 +156,8 @@ const Dashboard = () => {
             <h4 className="font-bold text-gray-800 dark:text-white">Safe Schools</h4>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Admission probability &gt; 80%</p>
-          <div className="flex justify-between items-end">
-            <span className="text-2xl font-bold text-emerald-500">8</span>
-            <Link to="/universities" className="text-xs font-bold text-emerald-500 hover:underline">Explore →</Link>
+          <div className="flex justify-end items-end">
+            <Link to="/find-universities" className="text-xs font-bold text-emerald-500 hover:underline">Find matches →</Link>
           </div>
         </div>
 
@@ -156,9 +167,8 @@ const Dashboard = () => {
             <h4 className="font-bold text-gray-800 dark:text-white">Moderate Schools</h4>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Probability between 50–80%</p>
-          <div className="flex justify-between items-end">
-            <span className="text-2xl font-bold text-amber-500">12</span>
-            <Link to="/universities" className="text-xs font-bold text-amber-500 hover:underline">Explore →</Link>
+          <div className="flex justify-end items-end">
+            <Link to="/find-universities" className="text-xs font-bold text-amber-500 hover:underline">Find matches →</Link>
           </div>
         </div>
 
@@ -168,9 +178,8 @@ const Dashboard = () => {
             <h4 className="font-bold text-gray-800 dark:text-white">Reach Schools</h4>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Probability &lt; 50%</p>
-          <div className="flex justify-between items-end">
-            <span className="text-2xl font-bold text-red-500">4</span>
-            <Link to="/universities" className="text-xs font-bold text-red-500 hover:underline">Explore →</Link>
+          <div className="flex justify-end items-end">
+            <Link to="/find-universities" className="text-xs font-bold text-red-500 hover:underline">Find matches →</Link>
           </div>
         </div>
       </div>

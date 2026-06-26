@@ -275,7 +275,6 @@ Recommend at least 10 universities. Include SAFE, TARGET and REACH options.
 
         content = resp.json()["choices"][0]["message"]["content"]
         data = json.loads(content)
-        print(f"DEBUG RAW from OpenAI: {json.dumps(data, indent=2)}")
 
         raw_unis = data.get("universities", [])
 
@@ -317,12 +316,12 @@ Recommend at least 10 universities. Include SAFE, TARGET and REACH options.
         }
 
     except httpx.HTTPStatusError as e:
-        print(f"OpenAI HTTP Error: {e.response.text}")
-        raise HTTPException(status_code=502, detail=f"OpenAI error: {e.response.text}")
+        # Log minimal, non-sensitive info server-side; never leak the upstream body to the client.
+        print(f"OpenAI request failed with status {e.response.status_code}")
+        raise HTTPException(status_code=502, detail="The recommendation service is temporarily unavailable. Please try again.")
     except Exception as e:
-        import traceback
-        print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"AI Recommendation failed: {str(e)}")
+        print(f"AI recommendation error: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail="Failed to generate recommendations. Please try again.")
 
 # ── RECOMMENDATION HISTORY ───────────────────────────────────────────────────
 
@@ -392,7 +391,8 @@ async def ai_chat(
         reply = resp.json()["choices"][0]["message"]["content"]
         return {"reply": reply}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"AI chat error: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail="The chat service is temporarily unavailable. Please try again.")
 
 if __name__ == "__main__":
     import uvicorn

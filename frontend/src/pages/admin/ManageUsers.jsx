@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import Button from '../../components/common/Button';
 import { cn } from '../../utils/cn';
+import FutureScopeBanner from '../../components/common/FutureScopeBanner';
 
 const users = [
   { id: 1, name: 'Alex Johnson', email: 'alex@example.com', role: 'admin', status: 'Active', joined: 'Mar 12, 2026' },
@@ -16,6 +17,7 @@ const users = [
 const ManageUsers = () => {
   return (
     <div className="space-y-8">
+      <FutureScopeBanner message="User management APIs are pending. The users listed below are sample data for demonstration; the action buttons are not wired to a live backend yet." />
       <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700 flex flex-col md:flex-row gap-4">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />

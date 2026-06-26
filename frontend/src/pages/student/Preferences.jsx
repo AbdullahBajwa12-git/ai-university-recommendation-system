@@ -3,6 +3,7 @@ import {
   Globe, BookOpen, GraduationCap, Wallet, X,
 } from 'lucide-react';
 import Button from '../../components/common/Button';
+import FutureScopeBanner from '../../components/common/FutureScopeBanner';
 import { cn } from '../../utils/cn';
 
 const countries = ['USA', 'Canada', 'Germany', 'Australia', 'UK', 'Netherlands', 'Ireland', 'Sweden'];
@@ -29,6 +30,7 @@ const Preferences = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
+      <FutureScopeBanner message="Saved preferences are a planned feature. Selections here are not stored yet — use the Find Universities wizard to get live AI recommendations from your inputs." />
       <div>
         <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Study Preferences</h2>
         <p className="text-gray-500 mt-1">Customize your preferences to refine AI recommendations.</p>

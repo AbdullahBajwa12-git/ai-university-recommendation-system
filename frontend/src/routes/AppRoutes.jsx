@@ -10,6 +10,7 @@ import AuthLayout from '../layouts/AuthLayout';
 // Auth Pages
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
+import Unauthorized from '../pages/Unauthorized';
 
 // Student Pages
 import Dashboard from '../pages/student/Dashboard';
@@ -36,6 +37,9 @@ const AppRoutes = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
       </Route>
+
+      {/* Standalone: shown when a role-guard rejects access */}
+      <Route path="/unauthorized" element={<Unauthorized />} />
 
       {/* Student Routes */}
       <Route element={<ProtectedRoute allowedRoles={['student']} />}>

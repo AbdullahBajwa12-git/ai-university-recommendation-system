@@ -1,6 +1,7 @@
 import React from 'react';
 import { Award, MapPin, Calendar, ArrowUpRight, Filter, Search } from 'lucide-react';
 import Button from '../../components/common/Button';
+import FutureScopeBanner from '../../components/common/FutureScopeBanner';
 
 const scholarships = [
   {
@@ -40,6 +41,7 @@ const scholarships = [
 const Scholarships = () => {
   return (
     <div className="space-y-8 pb-12">
+      <FutureScopeBanner message="Scholarship matching is a planned feature. The scholarships listed below are sample data for demonstration and are not yet sourced from a live database." />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Global Scholarships</h2>

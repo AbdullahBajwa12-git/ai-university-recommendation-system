@@ -5,6 +5,7 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts';
 import { cn } from '../../utils/cn';
+import FutureScopeBanner from '../../components/common/FutureScopeBanner';
 
 const stats = [
   { name: 'Total Users', value: '1,284', icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
@@ -35,6 +36,7 @@ const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'];
 const AdminDashboard = () => {
   return (
     <div className="space-y-8 pb-12">
+      <FutureScopeBanner message="Admin analytics APIs are pending. The metrics and charts below are sample data for demonstration and do not reflect live system activity yet." />
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat) => (

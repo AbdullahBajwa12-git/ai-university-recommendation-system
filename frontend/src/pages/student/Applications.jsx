@@ -3,6 +3,7 @@ import {
   FileText, CheckCircle2, XCircle, Timer, MoreVertical, Plus, MapPin, Clock, ExternalLink,
 } from 'lucide-react';
 import Button from '../../components/common/Button';
+import FutureScopeBanner from '../../components/common/FutureScopeBanner';
 import { cn } from '../../utils/cn';
 
 const apps = [
@@ -51,6 +52,7 @@ const statusConfig = {
 const Applications = () => {
   return (
     <div className="space-y-8 pb-12">
+      <FutureScopeBanner message="Application tracking is a planned feature. The applications and statistics shown are sample data for demonstration and are not yet stored or tracked by the live system." />
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Your Applications</h2>

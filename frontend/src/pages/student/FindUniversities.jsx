@@ -388,6 +388,12 @@ const FindUniversities = () => {
                 </div>
               </div>
 
+              {/* Credibility disclaimer */}
+              <p className="text-xs text-gray-400 dark:text-gray-500 italic px-1">
+                AI-assisted recommendations are for guidance only. Always verify admission requirements,
+                deadlines, fees, and scholarships on the official university website.
+              </p>
+
               {/* Grid of Results */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {displayUniversities().length > 0 ? (

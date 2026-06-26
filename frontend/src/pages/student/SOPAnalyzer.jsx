@@ -3,6 +3,7 @@ import {
   FileText, CheckCircle2, AlertTriangle, Search, Sparkles, ArrowRight, Clock,
 } from 'lucide-react';
 import Button from '../../components/common/Button';
+import FutureScopeBanner from '../../components/common/FutureScopeBanner';
 import { cn } from '../../utils/cn';
 
 const SOPAnalyzer = () => {
@@ -38,6 +39,7 @@ const SOPAnalyzer = () => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-12">
+      <FutureScopeBanner message="The SOP Analyzer is a planned feature. The clarity, structure and persuasion scores shown are sample values for demonstration — your text is not yet analysed by a live model." />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">

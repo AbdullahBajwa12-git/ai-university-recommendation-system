@@ -10,6 +10,7 @@ import {
   FileText
 } from 'lucide-react';
 import Button from '../../components/common/Button';
+import FutureScopeBanner from '../../components/common/FutureScopeBanner';
 
 const ResumeAnalyzer = () => {
   const [file, setFile] = useState(null);
@@ -39,6 +40,7 @@ const ResumeAnalyzer = () => {
 
   return (
     <div className="max-w-5xl mx-auto space-y-10 pb-16 animate-in fade-in duration-500">
+      <FutureScopeBanner message="The Resume Analyzer is a planned feature. The score, extracted skills and suggestions shown are sample data for demonstration — resumes are not yet processed by a live model." />
       <div className="text-center space-y-4">
         <h2 className="text-4xl font-extrabold tracking-tight">AI Resume Analyzer</h2>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
