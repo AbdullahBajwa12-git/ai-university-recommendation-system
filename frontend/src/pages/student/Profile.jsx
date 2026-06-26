@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import toast from 'react-hot-toast';
 import {
-  GraduationCap, Globe, DollarSign, Award, Save, ChevronRight,
+  GraduationCap, Globe, DollarSign, Award, Save, ChevronRight, Loader2,
 } from 'lucide-react';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import { cn } from '../../utils/cn';
+import profileService from '../../services/profileService';
 
 const profileSchema = z.object({
   cgpa: z.string().optional(),
@@ -20,15 +22,90 @@ const profileSchema = z.object({
   work_experience_months: z.string().optional(),
 });
 
+// Fields the form binds to (must match backend StudentProfile schema names).
+const FORM_FIELDS = [
+  'cgpa', 'ielts_score', 'gre_score', 'budget_max',
+  'preferred_study_level', 'degree', 'graduation_year', 'work_experience_months',
+];
+// Fields the backend stores as float/int — sent as numbers, omitted when empty.
+const NUMERIC_FIELDS = [
+  'cgpa', 'ielts_score', 'gre_score', 'budget_max',
+  'graduation_year', 'work_experience_months',
+];
+
+// Backend profile object → string-based form values (inputs need strings).
+const toFormValues = (data) => {
+  const out = {};
+  FORM_FIELDS.forEach((f) => {
+    const v = data?.[f];
+    out[f] = v === null || v === undefined ? '' : String(v);
+  });
+  if (!out.preferred_study_level) out.preferred_study_level = 'Masters';
+  return out;
+};
+
+// Form values → clean PUT payload: drop empties, coerce numeric fields to numbers.
+const buildPayload = (data) => {
+  const payload = {};
+  Object.entries(data).forEach(([key, value]) => {
+    if (value === '' || value === null || value === undefined) return;
+    if (NUMERIC_FIELDS.includes(key)) {
+      const num = Number(value);
+      if (!Number.isNaN(num)) payload[key] = num;
+    } else {
+      payload[key] = value;
+    }
+  });
+  return payload;
+};
+
 const Profile = () => {
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm({
     resolver: zodResolver(profileSchema),
     defaultValues: { cgpa: '', preferred_study_level: 'Masters' },
   });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const onSubmit = (data) => {
-    console.log('Saving Profile:', data);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const data = await profileService.getProfile();
+        if (active) reset(toFormValues(data));
+      } catch (err) {
+        // 404 = no profile yet: leave the empty form as-is. Anything else is an error.
+        if (active && err.response?.status !== 404) {
+          toast.error('Failed to load profile');
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [reset]);
+
+  const onSubmit = async (data) => {
+    setSaving(true);
+    try {
+      const updated = await profileService.updateProfile(buildPayload(data));
+      reset(toFormValues(updated));
+      toast.success('Profile saved');
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      toast.error(typeof detail === 'string' ? detail : 'Failed to save profile');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24 text-gray-400">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
@@ -37,9 +114,9 @@ const Profile = () => {
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Academic Profile</h2>
           <p className="text-sm text-gray-500 mt-1">Keep your scores updated for accurate admission predictions.</p>
         </div>
-        <Button onClick={handleSubmit(onSubmit)} className="gap-2">
-          <Save className="h-4 w-4" />
-          Save Changes
+        <Button onClick={handleSubmit(onSubmit)} disabled={saving} className="gap-2">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          {saving ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>
 

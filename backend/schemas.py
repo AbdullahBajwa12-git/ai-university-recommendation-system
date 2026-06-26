@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr, model_validator
 from typing import Optional, List, Any, Dict
 from datetime import datetime
 from uuid import UUID
+from beanie import PydanticObjectId
 
 # ── User Schemas ─────────────────────────────────────────────────────────────
 
@@ -54,8 +55,12 @@ class StudentProfileCreate(StudentProfileBase):
     user_id: UUID
 
 class StudentProfile(StudentProfileBase):
-    id: UUID
-    user_id: UUID
+    # The StudentProfile document uses a Mongo ObjectId for id and stores the
+    # owner as a Link[User], so neither maps to a required UUID. Both are made
+    # optional/ObjectId-typed purely so response serialization succeeds; the
+    # frontend reads only the academic fields, not these identifiers.
+    id: Optional[PydanticObjectId] = None
+    user_id: Optional[UUID] = None
     created_at: datetime
 
     class Config:
