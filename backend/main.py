@@ -176,6 +176,117 @@ async def admin_analytics(current_admin: models.User = Depends(auth.get_current_
         "top_saved_universities": top_saved_universities,
     }
 
+# ── ADMIN: COUNTRY MANAGEMENT (list / find-or-create) ─────────────────────────
+
+async def _get_or_create_country(name: str):
+    """Return an existing Country by name (case-sensitive match) or create one.
+    Mirrors the seed script's find-or-create behaviour."""
+    name = (name or "").strip()
+    if not name:
+        return None
+    country = await models.Country.find_one(models.Country.name == name)
+    if not country:
+        country = models.Country(name=name)
+        await country.insert()
+    return country
+
+@app.get("/api/v1/admin/countries", response_model=List[schemas.CountryOut])
+async def admin_list_countries(current_admin: models.User = Depends(auth.get_current_admin)):
+    countries = await models.Country.find_all().to_list()
+    return sorted(countries, key=lambda c: c.name.lower())
+
+@app.post("/api/v1/admin/countries", response_model=schemas.CountryOut, status_code=201)
+async def admin_create_country(
+    payload: schemas.CountryCreate,
+    current_admin: models.User = Depends(auth.get_current_admin),
+):
+    name = (payload.name or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Country name is required")
+    country = await _get_or_create_country(name)
+    return country
+
+# ── ADMIN: UNIVERSITY CRUD ────────────────────────────────────────────────────
+
+@app.get("/api/v1/admin/universities", response_model=List[schemas.University])
+async def admin_list_universities(current_admin: models.User = Depends(auth.get_current_admin)):
+    universities = await models.University.find_all().to_list()
+    countries = await models.Country.find_all().to_list()
+    country_map = {str(c.id): c.name for c in countries}
+    return [_university_out(uni, country_map.get(_country_ref_id(uni))) for uni in universities]
+
+@app.post("/api/v1/admin/universities", response_model=schemas.University, status_code=201)
+async def admin_create_university(
+    payload: schemas.UniversityAdminCreate,
+    current_admin: models.User = Depends(auth.get_current_admin),
+):
+    country = await _get_or_create_country(payload.country)
+    if not country:
+        raise HTTPException(status_code=400, detail="Country is required")
+    uni = models.University(
+        university_name=payload.university_name,
+        country=country,
+        city=payload.city,
+        qs_ranking=payload.qs_ranking,
+        website=payload.website,
+        yearly_tuition_fee=payload.yearly_tuition_fee,
+        acceptance_rate=payload.acceptance_rate,
+        description=payload.description,
+    )
+    await uni.insert()
+    return _university_out(uni, country.name)
+
+@app.patch("/api/v1/admin/universities/{university_id}", response_model=schemas.University)
+async def admin_update_university(
+    university_id: PydanticObjectId,
+    payload: schemas.UniversityAdminUpdate,
+    current_admin: models.User = Depends(auth.get_current_admin),
+):
+    uni = await models.University.get(university_id)
+    if not uni:
+        raise HTTPException(status_code=404, detail="University not found")
+
+    data = payload.model_dump(exclude_unset=True)
+    country_name = None
+    if "country" in data:
+        cval = data.pop("country")
+        if cval:
+            country = await _get_or_create_country(cval)
+            uni.country = country
+            country_name = country.name
+    for key, value in data.items():
+        setattr(uni, key, value)
+    await uni.save()
+
+    if country_name is None:
+        ref_id = _country_ref_id(uni)
+        if ref_id:
+            country = await models.Country.get(ref_id)
+            country_name = country.name if country else None
+    return _university_out(uni, country_name)
+
+@app.delete("/api/v1/admin/universities/{university_id}")
+async def admin_delete_university(
+    university_id: PydanticObjectId,
+    current_admin: models.User = Depends(auth.get_current_admin),
+):
+    uni = await models.University.get(university_id)
+    if not uni:
+        raise HTTPException(status_code=404, detail="University not found")
+    # Saved universities and recommendation sessions store denormalized copies
+    # (no link), so they are unaffected. UniversityProgram does link here, so
+    # block deletion if any program references this university to avoid orphans.
+    linked_programs = await models.UniversityProgram.find(
+        models.UniversityProgram.university.id == university_id
+    ).count()
+    if linked_programs:
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete: this university has linked programs.",
+        )
+    await uni.delete()
+    return {"message": "University deleted"}
+
 # ── STUDENT ENDPOINTS ────────────────────────────────────────────────────────
 
 @app.get("/api/v1/student/profile", response_model=schemas.StudentProfile)

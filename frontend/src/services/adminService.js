@@ -34,6 +34,30 @@ export const adminService = {
     const response = await apiClient.patch(`/admin/users/${id}`, payload);
     return response.data;
   },
+
+  // ── Universities ──
+  listUniversities: async () => {
+    const response = await apiClient.get('/admin/universities');
+    return response.data;
+  },
+  createUniversity: async (payload) => {
+    const response = await apiClient.post('/admin/universities', payload);
+    return response.data;
+  },
+  updateUniversity: async (id, payload) => {
+    const response = await apiClient.patch(`/admin/universities/${id}`, payload);
+    return response.data;
+  },
+  deleteUniversity: async (id) => {
+    const response = await apiClient.delete(`/admin/universities/${id}`);
+    return response.data;
+  },
+
+  // ── Countries ──
+  listCountries: async () => {
+    const response = await apiClient.get('/admin/countries');
+    return response.data;
+  },
 };
 
 export default adminService;

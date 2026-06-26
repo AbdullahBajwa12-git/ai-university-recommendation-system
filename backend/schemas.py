@@ -253,6 +253,54 @@ class University(UniversityBase):
     class Config:
         from_attributes = True
 
+# ── Admin University CRUD Schemas ────────────────────────────────────────────
+
+def _blank_to_none(data: Any) -> Any:
+    """Turn empty/whitespace-only strings into None so optional fields stay null."""
+    if isinstance(data, dict):
+        return {k: (None if isinstance(v, str) and v.strip() == "" else v) for k, v in data.items()}
+    return data
+
+class UniversityAdminCreate(BaseModel):
+    university_name: str
+    country: str                       # country name (found or created server-side)
+    city: Optional[str] = None
+    qs_ranking: Optional[int] = None
+    website: Optional[str] = None
+    yearly_tuition_fee: Optional[int] = None
+    acceptance_rate: Optional[float] = None
+    description: Optional[str] = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def empty_string_to_none(cls, data: Any) -> Any:
+        return _blank_to_none(data)
+
+class UniversityAdminUpdate(BaseModel):
+    university_name: Optional[str] = None
+    country: Optional[str] = None
+    city: Optional[str] = None
+    qs_ranking: Optional[int] = None
+    website: Optional[str] = None
+    yearly_tuition_fee: Optional[int] = None
+    acceptance_rate: Optional[float] = None
+    description: Optional[str] = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def empty_string_to_none(cls, data: Any) -> Any:
+        return _blank_to_none(data)
+
+class CountryOut(BaseModel):
+    id: Optional[PydanticObjectId] = None
+    name: str
+
+    class Config:
+        from_attributes = True
+
+class CountryCreate(BaseModel):
+    name: str
+
 class ProgramBase(BaseModel):
     program_name: str
     university_id: UUID
