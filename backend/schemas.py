@@ -200,7 +200,7 @@ class SavedUniversityOut(BaseModel):
 
 class UniversityBase(BaseModel):
     university_name: str
-    country_id: Optional[int] = None
+    country: Optional[str] = None      # resolved Country.name (model stores a Link[Country])
     qs_ranking: Optional[int] = None
     website: Optional[str] = None
     city: Optional[str] = None
@@ -209,7 +209,8 @@ class UniversityBase(BaseModel):
     description: Optional[str] = None
 
 class University(UniversityBase):
-    id: UUID
+    # University documents use a Mongo ObjectId id (no UUID field on the model).
+    id: Optional[PydanticObjectId] = None
     created_at: datetime
 
     class Config:

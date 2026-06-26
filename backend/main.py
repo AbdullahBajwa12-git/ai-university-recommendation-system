@@ -145,16 +145,50 @@ async def delete_saved_university(
 
 # ── UNIVERSITY ENDPOINTS ────────────────────────────────────────────────────
 
+def _university_out(uni: "models.University", country_name) -> dict:
+    """Flatten a University document into the response shape. country_name is the
+    pre-resolved Country.name (Link is resolved by the caller, since fetch_links
+    is unavailable with this Motor version)."""
+    return {
+        "id": uni.id,
+        "university_name": uni.university_name,
+        "country": country_name,
+        "city": uni.city,
+        "qs_ranking": uni.qs_ranking,
+        "website": uni.website,
+        "yearly_tuition_fee": uni.yearly_tuition_fee,
+        "acceptance_rate": uni.acceptance_rate,
+        "description": uni.description,
+        "created_at": uni.created_at,
+    }
+
+def _country_ref_id(uni) -> str | None:
+    """Return the linked Country's id as a string, if present."""
+    link = getattr(uni, "country", None)
+    ref = getattr(link, "ref", None)
+    return str(ref.id) if ref is not None else None
+
 @app.get("/api/v1/universities", response_model=List[schemas.University])
 async def list_universities():
-    return await models.University.find_all().to_list()
+    universities = await models.University.find_all().to_list()
+    countries = await models.Country.find_all().to_list()
+    country_map = {str(c.id): c.name for c in countries}
+    return [
+        _university_out(uni, country_map.get(_country_ref_id(uni)))
+        for uni in universities
+    ]
 
 @app.get("/api/v1/universities/{uni_id}", response_model=schemas.University)
 async def get_university(uni_id: PydanticObjectId):
     uni = await models.University.get(uni_id)
     if not uni:
         raise HTTPException(status_code=404, detail="University not found")
-    return uni
+    country_name = None
+    ref_id = _country_ref_id(uni)
+    if ref_id:
+        country = await models.Country.get(ref_id)
+        country_name = country.name if country else None
+    return _university_out(uni, country_name)
 
 # ── AI RECOMMENDATION ENDPOINT ───────────────────────────────────────────────
 
