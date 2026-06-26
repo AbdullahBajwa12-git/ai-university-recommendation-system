@@ -6,6 +6,7 @@ from typing import List
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from beanie import PydanticObjectId
+from uuid import UUID
 
 import models
 import schemas
@@ -130,7 +131,7 @@ async def save_university(
 
 @app.delete("/api/v1/universities/saved/{saved_id}")
 async def delete_saved_university(
-    saved_id: PydanticObjectId,
+    saved_id: UUID,  # SavedUniversity.id is a UUID, not a Mongo ObjectId
     current_user: models.User = Depends(auth.get_current_user)
 ):
     saved = await models.SavedUniversity.find_one(
@@ -310,7 +311,7 @@ async def get_recommendation_history(current_user: models.User = Depends(auth.ge
 
 @app.get("/api/v1/recommendations/history/{session_id}", response_model=schemas.RecommendationResponse)
 async def get_recommendation_session(
-    session_id: PydanticObjectId,
+    session_id: UUID,  # RecommendationSession.id is a UUID, not a Mongo ObjectId
     current_user: models.User = Depends(auth.get_current_user)
 ):
     session = await models.RecommendationSession.find_one(
