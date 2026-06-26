@@ -13,6 +13,11 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
+class UserRegister(BaseModel):
+    email: EmailStr
+    full_name: Optional[str] = None
+    password: str
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str

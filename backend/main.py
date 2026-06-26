@@ -35,7 +35,7 @@ OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 # ── AUTH ENDPOINTS ──────────────────────────────────────────────────────────
 
 @app.post("/api/v1/auth/register", response_model=schemas.Token)
-async def register_user(user_data: schemas.UserCreate):
+async def register_user(user_data: schemas.UserRegister):
     existing_user = await models.User.find_one(models.User.email == user_data.email)
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -45,7 +45,7 @@ async def register_user(user_data: schemas.UserCreate):
         email=user_data.email,
         full_name=user_data.full_name,
         password_hash=hashed_password,
-        role=user_data.role
+        role="student"  # Role is forced server-side; never trust client input
     )
     await new_user.insert()
 
