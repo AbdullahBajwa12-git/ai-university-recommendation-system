@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { 
-  BarChart3, 
-  Users, 
-  Settings, 
-  Database,
-  Globe,
+import {
+  BarChart3,
+  Users,
   BookOpen,
   Award,
   LogOut,
@@ -26,9 +23,6 @@ const AdminLayout = () => {
     { name: 'Manage Users', path: '/admin/users', icon: Users },
     { name: 'Universities', path: '/admin/universities', icon: BookOpen },
     { name: 'Scholarships', path: '/admin/scholarships', icon: Award },
-    { name: 'Countries', path: '/admin/countries', icon: Globe },
-    { name: 'Data Management', path: '/admin/datasets', icon: Database },
-    { name: 'System Settings', path: '/admin/settings', icon: Settings },
   ];
 
   return (
