@@ -301,6 +301,58 @@ class CountryOut(BaseModel):
 class CountryCreate(BaseModel):
     name: str
 
+# ── Scholarship Schemas ──────────────────────────────────────────────────────
+
+class ScholarshipBase(BaseModel):
+    title: str
+    provider: Optional[str] = None
+    university_name: Optional[str] = None
+    country: Optional[str] = None
+    level: Optional[str] = None
+    field_of_study: Optional[str] = None
+    funding_type: Optional[str] = None
+    amount: Optional[str] = None
+    deadline: Optional[str] = None
+    eligibility: Optional[str] = None
+    apply_url: Optional[str] = None
+    description: Optional[str] = None
+    is_active: bool = True
+
+class ScholarshipCreate(ScholarshipBase):
+    @model_validator(mode='before')
+    @classmethod
+    def empty_string_to_none(cls, data: Any) -> Any:
+        return _blank_to_none(data)
+
+class ScholarshipUpdate(BaseModel):
+    title: Optional[str] = None
+    provider: Optional[str] = None
+    university_name: Optional[str] = None
+    country: Optional[str] = None
+    level: Optional[str] = None
+    field_of_study: Optional[str] = None
+    funding_type: Optional[str] = None
+    amount: Optional[str] = None
+    deadline: Optional[str] = None
+    eligibility: Optional[str] = None
+    apply_url: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def empty_string_to_none(cls, data: Any) -> Any:
+        # Keep is_active if explicitly false; only blank *strings* become None.
+        return _blank_to_none(data)
+
+class ScholarshipOut(ScholarshipBase):
+    id: Optional[PydanticObjectId] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
 class ProgramBase(BaseModel):
     program_name: str
     university_id: UUID

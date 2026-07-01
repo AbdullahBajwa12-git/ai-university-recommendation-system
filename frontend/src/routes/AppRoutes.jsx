@@ -29,6 +29,7 @@ import FindUniversities from '../pages/student/FindUniversities';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import ManageUsers from '../pages/admin/ManageUsers';
 import ManageUniversities from '../pages/admin/ManageUniversities';
+import ManageScholarships from '../pages/admin/ManageScholarships';
 
 const AppRoutes = () => {
   return (
@@ -67,6 +68,7 @@ const AppRoutes = () => {
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/users" element={<ManageUsers />} />
           <Route path="/admin/universities" element={<ManageUniversities />} />
+          <Route path="/admin/scholarships" element={<ManageScholarships />} />
         </Route>
       </Route>
 

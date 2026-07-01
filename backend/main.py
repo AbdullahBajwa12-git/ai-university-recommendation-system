@@ -2,7 +2,7 @@ import os
 import json
 import httpx
 from contextlib import asynccontextmanager
-from typing import List
+from typing import List, Optional
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from beanie import PydanticObjectId
@@ -287,6 +287,49 @@ async def admin_delete_university(
     await uni.delete()
     return {"message": "University deleted"}
 
+# ── ADMIN: SCHOLARSHIP CRUD ───────────────────────────────────────────────────
+
+@app.get("/api/v1/admin/scholarships", response_model=List[schemas.ScholarshipOut])
+async def admin_list_scholarships(current_admin: models.User = Depends(auth.get_current_admin)):
+    # Admins see all scholarships, active and inactive.
+    return await models.Scholarship.find_all().sort(-models.Scholarship.created_at).to_list()
+
+@app.post("/api/v1/admin/scholarships", response_model=schemas.ScholarshipOut, status_code=201)
+async def admin_create_scholarship(
+    payload: schemas.ScholarshipCreate,
+    current_admin: models.User = Depends(auth.get_current_admin),
+):
+    scholarship = models.Scholarship(**payload.model_dump())
+    await scholarship.insert()
+    return scholarship
+
+@app.patch("/api/v1/admin/scholarships/{scholarship_id}", response_model=schemas.ScholarshipOut)
+async def admin_update_scholarship(
+    scholarship_id: PydanticObjectId,
+    payload: schemas.ScholarshipUpdate,
+    current_admin: models.User = Depends(auth.get_current_admin),
+):
+    scholarship = await models.Scholarship.get(scholarship_id)
+    if not scholarship:
+        raise HTTPException(status_code=404, detail="Scholarship not found")
+    data = payload.model_dump(exclude_unset=True)
+    if data:
+        data["updated_at"] = datetime.utcnow()
+        await scholarship.set(data)
+    return scholarship
+
+@app.delete("/api/v1/admin/scholarships/{scholarship_id}")
+async def admin_delete_scholarship(
+    scholarship_id: PydanticObjectId,
+    current_admin: models.User = Depends(auth.get_current_admin),
+):
+    # Soft delete: preserve the record but hide it from students (is_active=False).
+    scholarship = await models.Scholarship.get(scholarship_id)
+    if not scholarship:
+        raise HTTPException(status_code=404, detail="Scholarship not found")
+    await scholarship.set({"is_active": False, "updated_at": datetime.utcnow()})
+    return {"message": "Scholarship deactivated"}
+
 # ── STUDENT ENDPOINTS ────────────────────────────────────────────────────────
 
 @app.get("/api/v1/student/profile", response_model=schemas.StudentProfile)
@@ -401,6 +444,38 @@ async def get_university(uni_id: PydanticObjectId):
         country = await models.Country.get(ref_id)
         country_name = country.name if country else None
     return _university_out(uni, country_name)
+
+# ── PUBLIC SCHOLARSHIPS ───────────────────────────────────────────────────────
+
+@app.get("/api/v1/scholarships", response_model=List[schemas.ScholarshipOut])
+async def list_scholarships(
+    country: Optional[str] = None,
+    level: Optional[str] = None,
+    field: Optional[str] = None,
+    search: Optional[str] = None,
+):
+    # Students only ever see active scholarships. Filtering is done in-memory
+    # (small dataset) to stay Motor-safe and simple.
+    items = await models.Scholarship.find(models.Scholarship.is_active == True).to_list()
+
+    def matches(s):
+        if country and (s.country or "").lower() != country.lower():
+            return False
+        if level and (s.level or "").lower() != level.lower():
+            return False
+        if field and field.lower() not in (s.field_of_study or "").lower():
+            return False
+        if search:
+            q = search.lower()
+            haystack = " ".join([
+                s.title or "", s.provider or "", s.university_name or "",
+                s.country or "", s.field_of_study or "", s.description or "",
+            ]).lower()
+            if q not in haystack:
+                return False
+        return True
+
+    return [s for s in items if matches(s)]
 
 # ── AI RECOMMENDATION ENDPOINT ───────────────────────────────────────────────
 

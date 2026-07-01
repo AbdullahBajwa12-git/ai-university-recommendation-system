@@ -103,6 +103,12 @@ Step "GET /universities returns a list" {
     if ($null -eq $unis) { throw "no response" }
 }
 
+# 8b. GET /scholarships (public, active only)
+Step "GET /scholarships returns a list" {
+    $sch = Invoke-RestMethod -Uri "$ApiBase/scholarships"
+    if ($null -eq $sch) { throw "no response" }
+}
+
 # 11. GET /recommendations/history
 Step "GET /recommendations/history" {
     Invoke-RestMethod -Uri "$ApiBase/recommendations/history" -Headers $script:authHeader | Out-Null
@@ -155,6 +161,21 @@ if ($env:ADMIN_EMAIL -and $env:ADMIN_PASSWORD) {
         $blocked = $false
         try {
             Invoke-RestMethod -Uri "$ApiBase/admin/stats" -Headers $script:authHeader | Out-Null
+        } catch {
+            $code = $_.Exception.Response.StatusCode.value__
+            if ($code -eq 403) { $blocked = $true } else { throw "expected 403, got $code" }
+        }
+        if (-not $blocked) { throw "student was NOT blocked" }
+    }
+    Step "Admin GET /admin/scholarships returns a list" {
+        $h = @{ Authorization = "Bearer $($script:adminToken)" }
+        $s = Invoke-RestMethod -Uri "$ApiBase/admin/scholarships" -Headers $h
+        if ($null -eq $s) { throw "no response" }
+    }
+    Step "Student is blocked from /admin/scholarships (expect 403)" {
+        $blocked = $false
+        try {
+            Invoke-RestMethod -Uri "$ApiBase/admin/scholarships" -Headers $script:authHeader | Out-Null
         } catch {
             $code = $_.Exception.Response.StatusCode.value__
             if ($code -eq 403) { $blocked = $true } else { throw "expected 403, got $code" }

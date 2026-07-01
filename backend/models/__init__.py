@@ -220,6 +220,29 @@ class Application(Document):
     class Settings:
         name = "applications"
 
+# ── SCHOLARSHIPS ─────────────────────────────────────────────────────────────
+
+class Scholarship(Document):
+    """Denormalized scholarship record (no hard links) for the catalog."""
+    title: str
+    provider: Optional[str] = None
+    university_name: Optional[str] = None
+    country: Optional[str] = None
+    level: Optional[str] = None
+    field_of_study: Optional[str] = None
+    funding_type: Optional[str] = None
+    amount: Optional[str] = None
+    deadline: Optional[str] = None
+    eligibility: Optional[str] = None
+    apply_url: Optional[str] = None
+    description: Optional[str] = None
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = None
+
+    class Settings:
+        name = "scholarships"
+
 # List of models for Beanie initialization
 ALL_MODELS = [
     User,
@@ -234,4 +257,5 @@ ALL_MODELS = [
     UniversityProgram,
     AdmissionPrediction,
     Application,
+    Scholarship,
 ]

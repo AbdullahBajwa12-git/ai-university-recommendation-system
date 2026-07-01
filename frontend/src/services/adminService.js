@@ -58,6 +58,24 @@ export const adminService = {
     const response = await apiClient.get('/admin/countries');
     return response.data;
   },
+
+  // ── Scholarships ──
+  listScholarships: async () => {
+    const response = await apiClient.get('/admin/scholarships');
+    return response.data;
+  },
+  createScholarship: async (payload) => {
+    const response = await apiClient.post('/admin/scholarships', payload);
+    return response.data;
+  },
+  updateScholarship: async (id, payload) => {
+    const response = await apiClient.patch(`/admin/scholarships/${id}`, payload);
+    return response.data;
+  },
+  deleteScholarship: async (id) => {
+    const response = await apiClient.delete(`/admin/scholarships/${id}`);
+    return response.data;
+  },
 };
 
 export default adminService;
