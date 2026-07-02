@@ -2,7 +2,7 @@ from typing import Optional, List, Any, Annotated
 from datetime import datetime
 from uuid import UUID, uuid4
 from beanie import Document, Link, Indexed
-from pydantic import Field, EmailStr
+from pydantic import Field, EmailStr, BaseModel as PydanticBaseModel
 
 # ── USERS ───────────────────────────────────────────────────────────────────
 
@@ -169,19 +169,47 @@ class FieldOfStudy(Document):
 
 # ── UNIVERSITIES ────────────────────────────────────────────────────────────
 
+class ProgramEntry(PydanticBaseModel):
+    program_name: str
+    study_level: str
+    field: str
+    duration_months: Optional[int] = None
+    tuition_fee_usd: Optional[int] = None
+    min_cgpa: Optional[float] = None
+    min_ielts: Optional[float] = None
+    min_gre: Optional[int] = None
+    course_page_url: Optional[str] = None
+    deadline: Optional[str] = None
+
 class University(Document):
     university_name: Annotated[str, Indexed()]
-    country: Link[Country]
-    qs_ranking: Optional[int] = None
-    website: Optional[str] = None
+    country: Annotated[str, Indexed()]
     city: Optional[str] = None
-    yearly_tuition_fee: Optional[int] = None
+    continent: Optional[str] = None
+    qs_ranking: Optional[int] = None
     acceptance_rate: Optional[float] = None
+    yearly_tuition_usd: Optional[int] = None
+    website: Optional[str] = None
+    admissions_url: Optional[str] = None
+    admissions_email: Optional[str] = None
+    programs: List[ProgramEntry] = Field(default_factory=list)
+    study_levels: List[str] = Field(default_factory=list)
+    fields: List[str] = Field(default_factory=list)
     description: Optional[str] = None
+    is_active: bool = True
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = None
 
     class Settings:
         name = "universities"
+        indexes = [
+            [("country", 1)],
+            [("qs_ranking", 1)],
+            [("study_levels", 1)],
+            [("fields", 1)],
+            [("yearly_tuition_usd", 1)],
+            [("acceptance_rate", 1)],
+        ]
 
 class UniversityProgram(Document):
     university: Link[University]

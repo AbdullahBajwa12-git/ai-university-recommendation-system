@@ -168,12 +168,16 @@ class RecommendedUniversityOut(BaseModel):
     degree: str
     major: str
     admission_chance: float
+    category: str
     world_rank: Optional[int] = None
     scholarship_available: Optional[bool] = None
     university_email: Optional[str] = None
-    university_website: Optional[str] = None
-    description: Optional[str] = None
-    reason_for_match: Optional[str] = None
+    university_website: str
+    course_page_url: Optional[str] = None
+    tuition_fee: Optional[int] = None
+    acceptance_rate: Optional[float] = None
+    deadline: Optional[str] = None
+    reason_for_match: str
 
 class AIRecommendationOutput(BaseModel):
     student_profile: Dict[str, Any]
@@ -210,7 +214,8 @@ class SaveUniversityRequest(BaseModel):
     scholarship_available: Optional[bool] = None
     university_email: Optional[str] = None
     university_website: Optional[str] = None
-    description: Optional[str] = None
+    course_page_url: Optional[str] = None
+    deadline: Optional[str] = None
     reason_for_match: Optional[str] = None
     session_id: Optional[UUID] = None
 
@@ -225,7 +230,8 @@ class SavedUniversityOut(BaseModel):
     scholarship_available: Optional[bool] = None
     university_email: Optional[str] = None
     university_website: Optional[str] = None
-    description: Optional[str] = None
+    course_page_url: Optional[str] = None
+    deadline: Optional[str] = None
     reason_for_match: Optional[str] = None
     session_id: Optional[UUID] = None
     saved_at: datetime
@@ -237,12 +243,17 @@ class SavedUniversityOut(BaseModel):
 
 class UniversityBase(BaseModel):
     university_name: str
-    country: Optional[str] = None      # resolved Country.name (model stores a Link[Country])
-    qs_ranking: Optional[int] = None
-    website: Optional[str] = None
+    country: str
     city: Optional[str] = None
-    yearly_tuition_fee: Optional[int] = None
+    continent: Optional[str] = None
+    qs_ranking: Optional[int] = None
     acceptance_rate: Optional[float] = None
+    yearly_tuition_usd: Optional[int] = None
+    website: Optional[str] = None
+    admissions_url: Optional[str] = None
+    admissions_email: Optional[str] = None
+    study_levels: List[str] = []
+    fields: List[str] = []
     description: Optional[str] = None
 
 class University(UniversityBase):
@@ -263,12 +274,15 @@ def _blank_to_none(data: Any) -> Any:
 
 class UniversityAdminCreate(BaseModel):
     university_name: str
-    country: str                       # country name (found or created server-side)
+    country: str
     city: Optional[str] = None
+    continent: Optional[str] = None
     qs_ranking: Optional[int] = None
-    website: Optional[str] = None
-    yearly_tuition_fee: Optional[int] = None
     acceptance_rate: Optional[float] = None
+    yearly_tuition_usd: Optional[int] = None
+    website: Optional[str] = None
+    admissions_url: Optional[str] = None
+    admissions_email: Optional[str] = None
     description: Optional[str] = None
 
     @model_validator(mode='before')
@@ -280,10 +294,13 @@ class UniversityAdminUpdate(BaseModel):
     university_name: Optional[str] = None
     country: Optional[str] = None
     city: Optional[str] = None
+    continent: Optional[str] = None
     qs_ranking: Optional[int] = None
-    website: Optional[str] = None
-    yearly_tuition_fee: Optional[int] = None
     acceptance_rate: Optional[float] = None
+    yearly_tuition_usd: Optional[int] = None
+    website: Optional[str] = None
+    admissions_url: Optional[str] = None
+    admissions_email: Optional[str] = None
     description: Optional[str] = None
 
     @model_validator(mode='before')
