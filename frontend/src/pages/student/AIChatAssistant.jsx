@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from '../../components/common/Button';
+import apiClient from '../../services/apiClient';
 
 const AIChatAssistant = () => {
   const [messages, setMessages] = useState([
@@ -30,18 +31,14 @@ const AIChatAssistant = () => {
     setLoading(true);
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/ai/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ message: currentInput }),
-      });
-      const data = await res.json();
+      const { data } = await apiClient.post('/ai/chat', { message: currentInput });
       setMessages((prev) => [...prev, { id: Date.now() + 1, role: 'assistant', text: data.reply || 'Sorry, I could not process that.' }]);
-    } catch {
-      setMessages((prev) => [...prev, { id: Date.now() + 1, role: 'assistant', text: 'Connection error. Please check the backend is running.' }]);
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      const errText = typeof detail === 'string'
+        ? detail
+        : 'Connection error. Please check the backend is running.';
+      setMessages((prev) => [...prev, { id: Date.now() + 1, role: 'assistant', text: errText }]);
     } finally {
       setLoading(false);
     }
