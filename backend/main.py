@@ -13,6 +13,8 @@ import models
 import schemas
 import auth
 from database import init_db
+from constants import STUDY_DESTINATIONS, ALL_DESTINATIONS
+from beanie.operators import In
 
 # ── LIFECYCLE ───────────────────────────────────────────────────────────────
 
@@ -477,32 +479,33 @@ async def list_scholarships(
 
     return [s for s in items if matches(s)]
 
+def sanitize_url(url: str | None) -> str:
+    if not url:
+        return ""
+    return url.strip(" \"'")
+
 # ── AI RECOMMENDATION ENDPOINT ───────────────────────────────────────────────
 
 SYSTEM_PROMPT = (
     "You are an expert university admissions counselor. "
-    "Given a student's profile, recommend a diverse list of at least 10 universities. "
-    "Include a mix of SAFE, TARGET, and REACH universities. "
-    "Even for weak profiles, include top global universities (Ivy League, Top 100 QS) as REACH options with low chances (5-20%). "
-    "For each university provide the following information: "
-    "university name, country, official website URL (e.g. https://www.mit.edu), "
-    "direct admissions page URL (e.g. https://admissions.mit.edu), "
-    "the real official admissions contact email address of the university (e.g. admissions@mit.edu), "
-    "admission chances as a percentage (0-100), "
-    "a DETAILED reason why it matches this specific student (see instructions below), "
-    "and the application deadline (specific month and day, e.g. January 15 or December 1). "
-    "Output ONLY valid JSON with a top-level key 'universities' containing an array. "
-    "Each object must have exactly these fields: "
-    "'name' (string), 'country' (string), 'website' (string, full https URL of official homepage), "
-    "'admissions_url' (string, full https URL of the admissions/apply page), "
-    "'email' (string, real official admissions email address like admissions@university.edu), "
-    "'chances' (integer 0-100), 'reason' (string), 'deadline' (string). "
-    "IMPORTANT — 'reason' must be 3-5 sentences that EXPLICITLY reference the student's actual credentials: "
-    "mention their CGPA, relevant test scores (IELTS/GRE/GMAT if provided), intended major, research or work experience, "
-    "and explain concretely WHY this university is a good fit (e.g. strong program ranking, research labs, scholarships, acceptance rate). "
-    "Do NOT write a generic reason — it must be personalised to the student's profile. "
-    "IMPORTANT: website, admissions_url, and email must be real and accurate — never null, never empty, never fabricated. "
-    "IMPORTANT: deadline must be a real, accurate application deadline for the program (e.g. 'January 15' or 'December 1') — never null or empty."
+    "I will provide a 'candidate_pool' JSON of pre-filtered universities and a 'student_profile'. "
+    "Your task is to select 12 to 20 universities strictly from the provided 'candidate_pool' that best match the student. "
+    "If the 'candidate_pool' has fewer than 12 universities, select as many valid matches as possible. "
+    "Include a mix of SAFE, TARGET, and REACH universities if possible. "
+    "Even for weak profiles, include top global universities from the pool as REACH options with low chances (5-20%). "
+    "For each university you select, you must provide: "
+    "'name' (string, exactly matching the candidate_pool name), "
+    "'country' (string, exactly matching the candidate_pool country), "
+    "'chances' (integer 0-100, your estimated admission probability), "
+    "'category' (string, one of 'SAFE', 'TARGET', or 'REACH'), "
+    "'reason' (string, 3-5 sentences EXPLICITLY referencing the student's actual credentials: "
+    "mention their CGPA, test scores, intended major, research/work experience, "
+    "and explain concretely WHY this university is a good fit). "
+    "CRITICAL RULES: "
+    "1. You MUST NOT invent, hallucinate, or recommend any university outside the provided 'candidate_pool'. "
+    "2. You MUST NOT invent any URLs, deadlines, tuition fees, or ranks. "
+    "3. Output ONLY valid JSON with a top-level key 'universities' containing an array of your selected objects. "
+    "Each object must have exactly these fields: 'name', 'country', 'chances', 'category', 'reason'."
 )
 
 @app.post("/api/v1/ai/recommend", response_model=schemas.RecommendationResponse)
@@ -512,29 +515,86 @@ async def get_university_recommendations(
 ):
     profile_dict = profile_data.model_dump(exclude_none=True)
 
-    # Build user message exactly like bnn.py
+    # 1. Target Countries Validation
+    target_countries = []
+    continents = profile_dict.get('continents', [])
+    for c in continents:
+        if c in STUDY_DESTINATIONS:
+            target_countries.extend(STUDY_DESTINATIONS[c])
+            
+    countries_pref = profile_dict.get('countries', [])
+    target_countries.extend(countries_pref)
+    
+    target_countries = list(set(target_countries))
+    valid_targets = [c for c in target_countries if c in ALL_DESTINATIONS]
+    
+    if not valid_targets:
+        valid_targets = ALL_DESTINATIONS
+
+    # 2. Database Filtering & Ranking
+    db_unis = await models.University.find(In(models.University.country, valid_targets)).to_list()
+    
+    student_degree = profile_dict.get('degree_applying_for', '').lower()
+    student_major = profile_dict.get('intended_major', '').lower()
+    
+    scored_unis = []
+    for u in db_unis:
+        score = 0
+        # Country match (already filtered, but explicit preference gets more points)
+        if u.country in countries_pref:
+            score += 15
+        else:
+            score += 5
+            
+        # Degree match
+        if student_degree and any(student_degree in sl.lower() for sl in u.study_levels):
+            score += 25
+            
+        # Field relevance
+        if student_major and any(student_major in f.lower() for f in u.fields):
+            score += 25
+            
+        # Ranking boost (slight weight)
+        if u.qs_ranking:
+            score += max(0, 10 - (u.qs_ranking // 50))
+            
+        scored_unis.append((score, u))
+        
+    scored_unis.sort(key=lambda x: x[0], reverse=True)
+    top_candidates = [u for score, u in scored_unis[:50]]
+    
+    print(f"[DEBUG] Found {len(db_unis)} DB universities. Pre-filtered to {len(top_candidates)} candidates.")
+
+    if not top_candidates:
+        raise HTTPException(status_code=404, detail="No matching universities found in the database for your preferences.")
+
+    # Prepare candidate pool for OpenAI
+    candidate_pool = []
+    for u in top_candidates:
+        programs_snippet = [{"name": p.program_name, "level": p.study_level, "field": p.field} for p in u.programs[:5]]
+        candidate_pool.append({
+            "name": u.university_name,
+            "country": u.country,
+            "rank": u.qs_ranking,
+            "tuition": u.yearly_tuition_usd,
+            "acceptance_rate": u.acceptance_rate,
+            "sample_programs": programs_snippet
+        })
+
+    # 3. Build Prompt
     p = profile_dict
     user_message = f"""
 Student Profile:
 - Name: {p.get('full_name', 'N/A')}
-- Email: {p.get('email', 'N/A')}
-- Country: {p.get('country', 'N/A')}
-- Nationality: {p.get('nationality', 'N/A')}
-- Current Education Level: {p.get('current_degree_level', 'N/A')}
+- Education: {p.get('current_degree_level', 'N/A')}
 - CGPA: {p.get('cgpa', 'N/A')}
-- IELTS: {p.get('ielts', 'N/A')}, TOEFL: {p.get('toefl', 'N/A')}, GRE: {p.get('gre', 'N/A')}, GMAT: {p.get('gmat', 'N/A')}
-- Gap Years: {p.get('year_gap', 0)}
-- Number of Publications: {p.get('num_publications', 0)}
-- Research Experience: {p.get('research_experience', 'N/A')}
-- Work Experience: {p.get('work_experience', 'N/A')}
-- Degree Applying For: {p.get('degree_applying_for', 'N/A')}
-- Intended Major: {p.get('intended_major', 'N/A')}
-- Preferred Continents: {p.get('continents', 'Any')}
-- Preferred Countries: {p.get('countries', 'Any')}
-- Needs Scholarship: {p.get('need_scholarship', False)}
-- Research Focused: {p.get('research_focused', False)}
+- IELTS: {p.get('ielts', 'N/A')}, GRE: {p.get('gre', 'N/A')}
+- Target Degree: {p.get('degree_applying_for', 'N/A')}
+- Target Major: {p.get('intended_major', 'N/A')}
+- Need Scholarship: {p.get('need_scholarship', False)}
 
-Recommend at least 10 universities. Include SAFE, TARGET and REACH options.
+Candidate Pool:
+{json.dumps(candidate_pool, indent=2)}
 """
 
     openai_key = os.getenv("OPENAI_API_KEY", "")
@@ -547,7 +607,7 @@ Recommend at least 10 universities. Include SAFE, TARGET and REACH options.
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user",   "content": user_message}
         ],
-        "temperature": 0.3,
+        "temperature": 0.2,
         "response_format": {"type": "json_object"}
     }
     headers = {
@@ -562,52 +622,80 @@ Recommend at least 10 universities. Include SAFE, TARGET and REACH options.
 
         content = resp.json()["choices"][0]["message"]["content"]
         data = json.loads(content)
-
         raw_unis = data.get("universities", [])
+        
+        # 4. Validating and Hydrating output
+        final_universities = []
+        top_cand_dict = {u.university_name.lower(): u for u in top_candidates}
+        
+        for ai_u in raw_unis:
+            ai_name = ai_u.get("name", "")
+            if not ai_name or ai_name.lower() not in top_cand_dict:
+                continue # Hallucination, drop it
+                
+            db_u = top_cand_dict[ai_name.lower()]
+            
+            # Find matching program for course URL and deadline
+            course_url = None
+            deadline = None
+            for prog in db_u.programs:
+                if student_major and (student_major in prog.field.lower() or student_major in prog.program_name.lower()):
+                    if prog.course_page_url:
+                        course_url = prog.course_page_url
+                    if prog.deadline:
+                        deadline = prog.deadline
+                    break
+                    
+            if not course_url:
+                course_url = db_u.admissions_url or db_u.website
+                
+            if not deadline:
+                deadline = "Verify on official website"
 
-        # Map AI fields → our schema fields
-        universities = []
-        for u in raw_unis:
-            uni_name = u.get("name", "Unknown University")
-            # Use real AI-returned URLs; fall back to Google search only if truly missing
-            name_encoded = uni_name.replace(" ", "+")
-            website = u.get("website") or f"https://www.google.com/search?q={name_encoded}+official+site"
-            universities.append({
-                "university_name":    uni_name,
-                "country":            u.get("country", "N/A"),
+            final_universities.append({
+                "university_name":    db_u.university_name,
+                "country":            db_u.country,
                 "degree":             p.get("degree_applying_for", "N/A"),
                 "major":              p.get("intended_major", "N/A"),
-                "admission_chance":   float(u.get("chances", 50)),
-                "world_rank":         u.get("world_rank") or u.get("rank"),
-                "scholarship_available": u.get("scholarship_available"),
-                "university_email":   u.get("email") or "",      # real admissions email address
-                "university_website": website,                    # real official website URL
-                "description":        u.get("deadline", ""),      # application deadline (shown as 'Deadline: ...' on card)
-                "reason_for_match":   u.get("reason", ""),        # detailed, student-specific match reason
+                "admission_chance":   float(ai_u.get("chances", 50)),
+                "category":           ai_u.get("category", "TARGET").upper(),
+                "world_rank":         db_u.qs_ranking,
+                "scholarship_available": bool(db_u.yearly_tuition_usd == 0 or p.get('need_scholarship', False)),
+                "university_email":   sanitize_url(db_u.admissions_email),
+                "university_website": sanitize_url(db_u.website),
+                "course_page_url":    sanitize_url(course_url),
+                "tuition_fee":        db_u.yearly_tuition_usd,
+                "acceptance_rate":    db_u.acceptance_rate,
+                "deadline":           deadline,
+                "reason_for_match":   ai_u.get("reason", "Good match for your profile."),
             })
+
+        print(f"[DEBUG] AI returned {len(raw_unis)} unis. Validated & Hydrated {len(final_universities)}.")
+
+        if not final_universities:
+            raise HTTPException(status_code=500, detail="AI failed to generate valid recommendations from the candidate pool.")
 
         session = models.RecommendationSession(
             user=current_user,
             profile_snapshot=profile_dict,
-            universities=universities,
-            total_count=len(universities),
+            universities=final_universities,
+            total_count=len(final_universities),
         )
         await session.insert()
 
         return {
             "session_id": str(session.id),
             "student_profile": profile_dict,
-            "recommended_universities": universities,
-            "total_count": len(universities),
+            "recommended_universities": final_universities,
+            "total_count": len(final_universities),
             "created_at": session.created_at,
         }
 
     except httpx.HTTPStatusError as e:
-        # Log minimal, non-sensitive info server-side; never leak the upstream body to the client.
         print(f"OpenAI request failed with status {e.response.status_code}")
         raise HTTPException(status_code=502, detail="The recommendation service is temporarily unavailable. Please try again.")
     except Exception as e:
-        print(f"AI recommendation error: {type(e).__name__}")
+        print(f"AI recommendation error: {type(e).__name__} - {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to generate recommendations. Please try again.")
 
 # ── RECOMMENDATION HISTORY ───────────────────────────────────────────────────
