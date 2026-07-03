@@ -166,6 +166,7 @@ class StudentRecommendationProfileIn(BaseModel):
 class RecommendedUniversityOut(BaseModel):
     university_name: str
     country: str
+    city: Optional[str] = None
     degree: str
     major: str
     admission_chance: float
@@ -208,14 +209,18 @@ class RecommendationHistoryItem(BaseModel):
 class SaveUniversityRequest(BaseModel):
     university_name: str
     country: str
+    city: Optional[str] = None
     degree: str
     major: str
     admission_chance: float
+    category: Optional[str] = None
     world_rank: Optional[int] = None
     scholarship_available: Optional[bool] = None
     university_email: Optional[str] = None
     university_website: Optional[str] = None
     course_page_url: Optional[str] = None
+    tuition_fee: Optional[int] = None
+    acceptance_rate: Optional[float] = None
     deadline: Optional[str] = None
     reason_for_match: Optional[str] = None
     session_id: Optional[UUID] = None
@@ -224,14 +229,18 @@ class SavedUniversityOut(BaseModel):
     id: UUID
     university_name: str
     country: str
+    city: Optional[str] = None
     degree: str
     major: str
     admission_chance: float
+    category: Optional[str] = None
     world_rank: Optional[int] = None
     scholarship_available: Optional[bool] = None
     university_email: Optional[str] = None
     university_website: Optional[str] = None
     course_page_url: Optional[str] = None
+    tuition_fee: Optional[int] = None
+    acceptance_rate: Optional[float] = None
     deadline: Optional[str] = None
     reason_for_match: Optional[str] = None
     session_id: Optional[UUID] = None

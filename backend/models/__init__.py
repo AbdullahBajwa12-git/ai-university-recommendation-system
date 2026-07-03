@@ -105,6 +105,7 @@ class RecommendedUniversityItem(Document):
     session_id: UUID
     university_name: str
     country: str
+    city: Optional[str] = None
     degree: str
     major: str
     admission_chance: float       # 0–100
@@ -138,6 +139,7 @@ class SavedUniversity(Document):
     user: Link[User]
     university_name: str
     country: str
+    city: Optional[str] = None
     degree: str
     major: str
     admission_chance: float
@@ -145,6 +147,11 @@ class SavedUniversity(Document):
     scholarship_available: Optional[bool] = None
     university_email: Optional[str] = None
     university_website: Optional[str] = None
+    category: Optional[str] = None
+    tuition_fee: Optional[int] = None
+    acceptance_rate: Optional[float] = None
+    course_page_url: Optional[str] = None
+    deadline: Optional[str] = None
     description: Optional[str] = None
     reason_for_match: Optional[str] = None
     session_id: Optional[UUID] = None

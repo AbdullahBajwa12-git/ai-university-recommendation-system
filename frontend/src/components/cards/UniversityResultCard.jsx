@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { 
-  Globe, Sparkles, Trophy, ExternalLink, Mail, 
-  MapPin, CheckCircle, Bookmark, BookmarkCheck,
-  TrendingDown, TrendingUp, CalendarClock, X, ChevronRight
+import {
+  Globe, Sparkles, Trophy, ExternalLink, Mail,
+  MapPin, Bookmark, BookmarkCheck,
+  CalendarClock, X, ChevronRight, Wallet, Target, Map
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
@@ -20,26 +20,26 @@ const getDomain = (url) => {
 
 /** Map well-known university names to their correct logo domains as a fallback */
 const KNOWN_LOGO_DOMAINS = {
-  'university of toronto':    'utoronto.ca',
-  'mit':                      'mit.edu',
+  'university of toronto': 'utoronto.ca',
+  'mit': 'mit.edu',
   'massachusetts institute of technology': 'mit.edu',
-  'harvard university':       'harvard.edu',
-  'stanford university':      'stanford.edu',
-  'university of oxford':     'ox.ac.uk',
-  'university of cambridge':  'cam.ac.uk',
-  'columbia university':      'columbia.edu',
-  'yale university':          'yale.edu',
-  'princeton university':     'princeton.edu',
-  'university of michigan':   'umich.edu',
-  'university of waterloo':   'uwaterloo.ca',
-  'mcgill university':        'mcgill.ca',
-  'ubc':                      'ubc.ca',
+  'harvard university': 'harvard.edu',
+  'stanford university': 'stanford.edu',
+  'university of oxford': 'ox.ac.uk',
+  'university of cambridge': 'cam.ac.uk',
+  'columbia university': 'columbia.edu',
+  'yale university': 'yale.edu',
+  'princeton university': 'princeton.edu',
+  'university of michigan': 'umich.edu',
+  'university of waterloo': 'uwaterloo.ca',
+  'mcgill university': 'mcgill.ca',
+  'ubc': 'ubc.ca',
   'university of british columbia': 'ubc.ca',
-  'eth zurich':               'ethz.ch',
+  'eth zurich': 'ethz.ch',
   'national university of singapore': 'nus.edu.sg',
-  'peking university':        'pku.edu.cn',
-  'tsinghua university':      'tsinghua.edu.cn',
-  'university of melbourne':  'unimelb.edu.au',
+  'peking university': 'pku.edu.cn',
+  'tsinghua university': 'tsinghua.edu.cn',
+  'university of melbourne': 'unimelb.edu.au',
 };
 
 const getLogoDomain = (name, website) => {
@@ -113,7 +113,7 @@ const MatchDetailModal = ({ isOpen, onClose, university }) => {
     <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white dark:bg-gray-900 w-full max-w-2xl rounded-[2rem] shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        
+
         {/* Header */}
         <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/5 px-8 pt-8 pb-6 border-b border-dashed border-emerald-200/60 dark:border-emerald-800/40">
           <div className="flex items-start justify-between gap-4">
@@ -227,11 +227,11 @@ const MatchDetailModal = ({ isOpen, onClose, university }) => {
 
 /* ── Main Card ───────────────────────────────────────────────────────────── */
 
-const UniversityResultCard = ({ 
-  university, 
-  onSave, 
-  onUnsave, 
-  isSaved, 
+const UniversityResultCard = ({
+  university,
+  onSave,
+  onUnsave,
+  isSaved,
   isSaving,
   showCompare,
   onCompareToggle,
@@ -250,8 +250,30 @@ const UniversityResultCard = ({
     university_email,
     university_website,
     description,
-    reason_for_match
+    reason_for_match,
+    city,
+    category,
+    course_page_url,
+    tuition_fee,
+    acceptance_rate,
+    deadline
   } = university;
+
+  const [isReasonExpanded, setIsReasonExpanded] = useState(false);
+  const [emailCopied, setEmailCopied] = useState(false);
+
+  const isValidUrl = (url) => {
+    if (!url) return false;
+    return url.startsWith('http://') || url.startsWith('https://');
+  };
+
+  const handleCopyEmail = () => {
+    if (university_email) {
+      navigator.clipboard.writeText(university_email);
+      setEmailCopied(true);
+      setTimeout(() => setEmailCopied(false), 2000);
+    }
+  };
 
   // Chance color logic
   const getChanceColor = (chance) => {
@@ -271,7 +293,7 @@ const UniversityResultCard = ({
   return (
     <>
       <div className="group relative bg-white dark:bg-gray-800 rounded-[2rem] border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-2xl hover:border-primary/20 transition-all duration-500 overflow-hidden flex flex-col h-full">
-        
+
         {/* Header with Stats */}
         <div className="p-8 pb-4">
           <div className="flex justify-between items-start mb-6">
@@ -280,10 +302,20 @@ const UniversityResultCard = ({
               <UniversityLogo name={university_name} website={university_website} />
 
               <div>
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
                   <span className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                    {country}
+                    {city ? `${city}, ${country}` : country}
                   </span>
+                  {category && (
+                    <span className={cn("text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full",
+                      category.toUpperCase() === 'SAFE' ? 'text-emerald-600 bg-emerald-500/10' :
+                        category.toUpperCase() === 'TARGET' ? 'text-yellow-600 bg-yellow-500/10' :
+                          category.toUpperCase() === 'REACH' ? 'text-orange-600 bg-orange-500/10' :
+                            'text-gray-600 bg-gray-500/10'
+                    )}>
+                      {category}
+                    </span>
+                  )}
                   {world_rank && (
                     <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-full flex items-center gap-1">
                       <Trophy className="h-3 w-3" /> QS Rank #{world_rank}
@@ -293,29 +325,31 @@ const UniversityResultCard = ({
                 <h4 className="text-xl font-bold leading-tight line-clamp-2 pr-6">{university_name}</h4>
               </div>
             </div>
-            
+
             <div className="flex flex-col gap-2">
-              <button 
+              <button
                 onClick={() => isSaved ? onUnsave() : onSave()}
                 disabled={isSaving}
                 className={cn(
                   "h-10 w-10 rounded-full flex items-center justify-center transition-all border",
-                  isSaved 
-                    ? "bg-emerald-500 border-emerald-500 text-white" 
-                    : "bg-gray-50 dark:bg-gray-900 border-gray-100 dark:border-gray-700 text-gray-400 hover:text-primary hover:border-primary"
+                  isSaved
+                    ? "bg-emerald-500 border-emerald-500 text-white"
+                    : "bg-gray-50 dark:bg-gray-900 border-gray-100 dark:border-gray-700 text-gray-400 hover:text-primary hover:border-primary",
+                  isSaving && "opacity-50 cursor-not-allowed"
                 )}
               >
                 {isSaved ? <BookmarkCheck className="h-5 w-5" /> : <Bookmark className="h-5 w-5" />}
               </button>
               {showCompare && (
-                 <button 
-                  onClick={onCompareToggle}
+                <button
+                  disabled
                   className={cn(
                     "h-10 w-10 rounded-full flex items-center justify-center transition-all border",
-                    isComparing 
-                      ? "bg-primary border-primary text-white" 
-                      : "bg-gray-50 dark:bg-gray-900 border-gray-100 dark:border-gray-700 text-gray-400 hover:text-primary hover:border-primary"
+                    isComparing
+                      ? "bg-primary border-primary text-white"
+                      : "bg-gray-50 dark:bg-gray-900 border-gray-100 dark:border-gray-700 text-gray-300 opacity-50 cursor-not-allowed"
                   )}
+                  title="Compare feature coming soon"
                 >
                   <div className="text-[10px] font-black">VS</div>
                 </button>
@@ -342,7 +376,7 @@ const UniversityResultCard = ({
                 </span>
               </div>
               <div className="group/bar h-3 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden relative">
-                <div 
+                <div
                   className={cn("h-full transition-all duration-1000 ease-out", getChanceColor(admission_chance))}
                   style={{ width: `${admission_chance}%` }}
                 />
@@ -354,69 +388,94 @@ const UniversityResultCard = ({
           </div>
         </div>
 
-        {/* ── Matching Badge ── */}
+        {/* ── Stats Grid ── */}
+        <div className="px-8 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/20 grid grid-cols-3 gap-4">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5 flex items-center gap-1"><Wallet className="h-3 w-3" /> Tuition Fee</p>
+            <p className="text-sm font-bold text-gray-700 dark:text-gray-200">
+              {tuition_fee ? `$${tuition_fee.toLocaleString()}/yr` : 'Not available'}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5 flex items-center gap-1"><Target className="h-3 w-3" /> Acceptance</p>
+            <p className="text-sm font-bold text-gray-700 dark:text-gray-200">
+              {acceptance_rate ? `${acceptance_rate}%` : 'Not available'}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5 flex items-center gap-1"><CalendarClock className="h-3 w-3" /> Deadline</p>
+            <p className="text-sm font-bold text-gray-700 dark:text-gray-200 truncate" title={deadline || 'Verify on official website'}>
+              {deadline || 'Verify on official website'}
+            </p>
+          </div>
+        </div>
+
+        {/* ── Matching Badge & Reason ── */}
         <div className="px-8 py-4 bg-emerald-500/5 dark:bg-emerald-500/10 border-y border-dashed border-emerald-500/20">
           <div className="flex items-start gap-2">
             <Sparkles className="h-4 w-4 text-emerald-500 mt-1 shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-0.5">The Matching Score Reason</p>
-              <p className="text-xs text-gray-600 dark:text-gray-400 italic leading-relaxed line-clamp-3">
+              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-0.5 flex justify-between items-center">
+                <span>The Matching Score Reason</span>
+                {scholarship_available && <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Scholarship Match</span>}
+              </p>
+              <p className={cn("text-xs text-gray-600 dark:text-gray-400 italic leading-relaxed", !isReasonExpanded && "line-clamp-2")}>
                 {reason_for_match || 'This university was selected based on your academic profile and preferences.'}
               </p>
-              {/* ── Click here to read more ── */}
               <button
-                onClick={() => setIsDetailOpen(true)}
-                className="mt-1.5 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 underline underline-offset-2 flex items-center gap-0.5 transition-colors"
+                onClick={() => setIsReasonExpanded(!isReasonExpanded)}
+                className="mt-1 text-[10px] font-bold text-emerald-600 hover:text-emerald-700 underline underline-offset-2 flex items-center gap-0.5 transition-colors"
               >
-                Click here to read more <ChevronRight className="h-3 w-3" />
+                {isReasonExpanded ? 'Show less' : 'Read more'}
               </button>
             </div>
           </div>
         </div>
 
-        {/* ── Deadline + Links ── */}
-        <div className="p-8 pt-5 flex-1 flex flex-col">
-          {/* Deadline row */}
-          {description && (
-            <div className="flex items-center gap-2 mb-5 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40">
-              <CalendarClock className="h-4 w-4 text-amber-500 shrink-0" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">Deadline:</span>
-              <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{description}</span>
+        {/* ── Action Buttons ── */}
+        <div className="p-6 flex-1 flex flex-col bg-gray-50/30 dark:bg-gray-800/10">
+          <div className="mt-auto flex flex-col gap-3">
+            <div className="flex flex-wrap gap-2">
+              {isValidUrl(course_page_url) && (
+                <a
+                  href={course_page_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-all shadow-sm whitespace-nowrap min-w-[120px]"
+                >
+                  <GraduationCap className="h-4 w-4 shrink-0" /> Course / Admissions
+                </a>
+              )}
+
+              {isValidUrl(university_website) && (
+                <a
+                  href={university_website}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-xs font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-all whitespace-nowrap min-w-[100px]"
+                >
+                  <ExternalLink className="h-4 w-4 shrink-0" /> Website
+                </a>
+              )}
+
+              {university_email && (
+                <button
+                  onClick={handleCopyEmail}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-xs font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-all whitespace-nowrap min-w-[100px]"
+                >
+                  <Mail className="h-4 w-4 shrink-0" /> {emailCopied ? 'Copied' : 'Copy Email'}
+                </button>
+              )}
             </div>
-          )}
 
-          <div className="mt-auto grid grid-cols-2 gap-3">
-            {/* Website Button */}
-            <a 
-              href={university_website || `https://www.google.com/search?q=${encodeURIComponent(university_name + ' official site')}`} 
-              target="_blank" 
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(university_name + (city ? ` ${city}` : '') + ` ${country}`)}`}
+              target="_blank"
               rel="noreferrer"
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm font-bold hover:bg-primary hover:text-white transition-all border border-gray-100 dark:border-gray-700"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
             >
-              <ExternalLink className="h-4 w-4" /> Website
+              <Map className="h-4 w-4 text-emerald-500 shrink-0" /> View on Map
             </a>
-
-            {/* Admissions Button */}
-            {university_email ? (
-              <a 
-                href={`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(university_email)}&su=${encodeURIComponent('Admission Inquiry – ' + university_name)}`}
-                target="_blank"
-                rel="noreferrer"
-                title={`Email: ${university_email}`}
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm font-bold hover:bg-primary hover:text-white transition-all border border-gray-100 dark:border-gray-700"
-              >
-                <Mail className="h-4 w-4" /> Admissions
-              </a>
-            ) : (
-              <a 
-                href={`https://www.google.com/search?q=${encodeURIComponent(university_name + ' admissions contact email')}`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 text-sm font-bold hover:bg-primary hover:text-white transition-all border border-gray-100 dark:border-gray-700"
-              >
-                <Mail className="h-4 w-4" /> Admissions
-              </a>
-            )}
           </div>
         </div>
       </div>
@@ -432,7 +491,7 @@ const UniversityResultCard = ({
 };
 
 // Re-using defined icons for standalone
-const GraduationCap = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>;
-const BrainCircuit = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 4.5V12"/><path d="m8 8 3 3"/><path d="M20 11a8.1 8.1 0 0 0-15.5-2"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2"/><circle cx="12" cy="12" r="2"/><path d="M12 12h5"/><circle cx="18" cy="12" r="1"/><path d="m15 15 2 2"/><circle cx="18" cy="18" r="1"/><path d="m12 15-1 1"/><circle cx="10" cy="18" r="1"/><path d="m8 12-2 1"/><circle cx="5" cy="14" r="1"/><path d="m9 9-2.5-1"/><circle cx="5" cy="7" r="1"/><circle cx="12" cy="4" r="1"/></svg>;
+const GraduationCap = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z" /><path d="M6 12v5c3 3 9 3 12 0v-5" /></svg>;
+const BrainCircuit = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 4.5V12" /><path d="m8 8 3 3" /><path d="M20 11a8.1 8.1 0 0 0-15.5-2" /><path d="M4 13a8.1 8.1 0 0 0 15.5 2" /><circle cx="12" cy="12" r="2" /><path d="M12 12h5" /><circle cx="18" cy="12" r="1" /><path d="m15 15 2 2" /><circle cx="18" cy="18" r="1" /><path d="m12 15-1 1" /><circle cx="10" cy="18" r="1" /><path d="m8 12-2 1" /><circle cx="5" cy="14" r="1" /><path d="m9 9-2.5-1" /><circle cx="5" cy="7" r="1" /><circle cx="12" cy="4" r="1" /></svg>;
 
 export default UniversityResultCard;

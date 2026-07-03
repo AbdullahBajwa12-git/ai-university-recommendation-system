@@ -1,37 +1,37 @@
 university_name,program_name,study_level,field,duration_months,tuition_fee_usd,min_cgpa,min_ielts,min_gre,course_page_url,deadline
-"Massachusetts Institute of Technology","MEng Computer Science","Masters","Computer Science",12,60000,3.5,7.0,320,"https://www.eecs.mit.edu/academics/graduate-programs/","December 15"
-"Massachusetts Institute of Technology","PhD Computer Science","PhD","Computer Science",60,0,3.7,7.0,325,"https://www.eecs.mit.edu/academics/graduate-programs/phd/","December 15"
-"Stanford University","MS Computer Science","Masters","Computer Science",18,58000,3.5,7.0,320,"https://cs.stanford.edu/academics/masters","December 1"
-"Stanford University","MS Artificial Intelligence","Masters","Artificial Intelligence",18,58000,3.6,7.5,325,"https://cs.stanford.edu/academics/masters","December 1"
-"Stanford University","PhD Computer Science","PhD","Computer Science",60,0,3.8,7.5,330,"https://cs.stanford.edu/academics/phd","December 1"
-"Carnegie Mellon University","MS Computer Science","Masters","Computer Science",16,52000,3.4,7.0,320,"https://www.cs.cmu.edu/academics/masters","December 10"
-"Carnegie Mellon University","MS Machine Learning","Masters","Artificial Intelligence",16,52000,3.5,7.5,325,"https://www.cmu.edu/academics/masters","December 10"
-"Carnegie Mellon University","PhD Computer Science","PhD","Computer Science",60,0,3.7,7.5,330,"https://www.cs.cmu.edu/academics/phd","December 10"
-"University of Toronto","MS Computer Science","Masters","Computer Science",24,44000,3.3,7.0,, "https://web.cs.toronto.edu/graduate","December 1"
-"University of Toronto","PhD Computer Science","PhD","Computer Science",48,0,3.5,7.0,, "https://web.cs.toronto.edu/graduate/phd","December 1"
-"McGill University","MS Computer Science","Masters","Computer Science",24,22000,3.2,6.5,, "https://www.cs.mcgill.ca/academic/graduate/","December 15"
-"McGill University","MS Electrical Engineering","Masters","Electrical Engineering",24,22000,3.2,6.5,, "https://www.mcgill.ca/ece/grad","December 15"
-"University of British Columbia","MS Computer Science","Masters","Computer Science",24,20000,3.3,7.0,, "https://www.cs.ubc.ca/students/grad/","December 15"
-"University of British Columbia","MS Data Science","Masters","Data Science",10,35000,3.0,7.0,, "https://masterdatascience.ubc.ca/","January 31"
-"University of Oxford","MSc Computer Science","Masters","Computer Science",12,40000,3.6,7.5,, "https://www.ox.ac.uk/admissions/graduate/courses/msc-computer-science","January 5"
-"University of Oxford","DPhil Computer Science","PhD","Computer Science",48,40000,3.8,7.5,, "https://www.ox.ac.uk/admissions/graduate/courses/dphil-computer-science","January 5"
-"Imperial College London","MSc Computer Science","Masters","Computer Science",12,38000,3.5,7.0,, "https://www.imperial.ac.uk/study/pg/computing/","May 1"
-"Imperial College London","MSc Artificial Intelligence","Masters","Artificial Intelligence",12,38000,3.6,7.0,, "https://www.imperial.ac.uk/study/pg/computing/artificial-intelligence/","May 1"
-"Imperial College London","PhD Computer Science","PhD","Computer Science",48,38000,3.7,7.0,, "https://www.imperial.ac.uk/computing/prospective-students/phd/","May 1"
-"University of Edinburgh","MSc Artificial Intelligence","Masters","Artificial Intelligence",12,33000,3.4,7.0,, "https://www.ed.ac.uk/studying/postgraduate/degrees/index.php?r=site/view&id=107","March 31"
-"University of Edinburgh","MSc Data Science","Masters","Data Science",12,33000,3.4,7.0,, "https://www.ed.ac.uk/studying/postgraduate/degrees/index.php?r=site/view&id=844","March 31"
-"Technical University of Munich","MSc Informatics","Masters","Computer Science",24,0,3.0,6.5,, "https://www.cit.tum.de/en/cit/studies/degree-programs/informatics-msc/","May 31"
-"Technical University of Munich","MSc Data Engineering","Masters","Data Science",24,0,3.0,6.5,, "https://www.cit.tum.de/en/cit/studies/degree-programs/data-engineering-analytics-msc/","May 31"
-"Technical University of Munich","PhD Informatics","PhD","Computer Science",48,0,3.3,6.5,, "https://www.gs.tum.de/en/gs/applicants/","Rolling"
-"RWTH Aachen University","MSc Computer Science","Masters","Computer Science",24,1500,3.0,6.5,, "https://www.rwth-aachen.de/go/id/bqv/?lidx=1","March 1"
-"RWTH Aachen University","MSc Electrical Engineering","Masters","Electrical Engineering",24,1500,3.0,6.5,, "https://www.rwth-aachen.de/go/id/bqv/?lidx=1","March 1"
-"ETH Zurich","MSc Computer Science","Masters","Computer Science",24,1800,3.5,7.0,320,"https://inf.ethz.ch/studies/master/master-cs.html","December 15"
-"ETH Zurich","MSc Data Science","Masters","Data Science",24,1800,3.5,7.0,320,"https://inf.ethz.ch/studies/master/master-ds.html","December 15"
-"ETH Zurich","PhD Computer Science","PhD","Computer Science",48,1800,3.8,7.0,325,"https://inf.ethz.ch/doctorate.html","Rolling"
-"University of Melbourne","MS Computer Science","Masters","Computer Science",24,35000,3.2,6.5,, "https://study.unimelb.edu.au/find/courses/graduate/master-of-computer-science/","October 31"
-"University of Melbourne","MS Data Science","Masters","Data Science",24,35000,3.2,6.5,, "https://study.unimelb.edu.au/find/courses/graduate/master-of-data-science/","October 31"
-"National University of Singapore","MSc Computer Science","Masters","Computer Science",18,30000,3.3,6.0,320,"https://www.comp.nus.edu.sg/programmes/pg/mcomp-cs/","March 15"
-"National University of Singapore","MSc Artificial Intelligence","Masters","Artificial Intelligence",18,30000,3.3,6.0,320,"https://www.comp.nus.edu.sg/programmes/pg/mcomp-ai/","March 15"
-"National University of Singapore","PhD Computer Science","PhD","Computer Science",48,30000,3.5,6.5,320,"https://www.comp.nus.edu.sg/programmes/pg/phdcs/","November 15"
-"KTH Royal Institute of Technology","MSc Computer Science","Masters","Computer Science",24,12000,3.0,6.5,, "https://www.kth.se/en/studies/master/computer-science","January 15"
-"KTH Royal Institute of Technology","MSc Machine Learning","Masters","Artificial Intelligence",24,12000,3.0,6.5,, "https://www.kth.se/en/studies/master/machine-learning","January 15"
+Massachusetts Institute of Technology,MEng Computer Science,Masters,Computer Science,12,60000,3.5,7.0,320,https://www.eecs.mit.edu/academics/graduate-programs/,December 15
+Massachusetts Institute of Technology,PhD Computer Science,PhD,Computer Science,60,0,3.7,7.0,325,,December 15
+Stanford University,MS Computer Science,Masters,Computer Science,18,58000,3.5,7.0,320,,December 1
+Stanford University,MS Artificial Intelligence,Masters,Artificial Intelligence,18,58000,3.6,7.5,325,,December 1
+Stanford University,PhD Computer Science,PhD,Computer Science,60,0,3.8,7.5,330,,December 1
+Carnegie Mellon University,MS Computer Science,Masters,Computer Science,16,52000,3.4,7.0,320,https://www.cs.cmu.edu/academics/masters,December 10
+Carnegie Mellon University,MS Machine Learning,Masters,Artificial Intelligence,16,52000,3.5,7.5,325,,December 10
+Carnegie Mellon University,PhD Computer Science,PhD,Computer Science,60,0,3.7,7.5,330,https://www.cs.cmu.edu/academics/phd,December 10
+University of Toronto,MS Computer Science,Masters,Computer Science,24,44000,3.3,7.0,,,December 1
+University of Toronto,PhD Computer Science,PhD,Computer Science,48,0,3.5,7.0,,,December 1
+McGill University,MS Computer Science,Masters,Computer Science,24,22000,3.2,6.5,,,December 15
+McGill University,MS Electrical Engineering,Masters,Electrical Engineering,24,22000,3.2,6.5,,,December 15
+University of British Columbia,MS Computer Science,Masters,Computer Science,24,20000,3.3,7.0,,,December 15
+University of British Columbia,MS Data Science,Masters,Data Science,10,35000,3.0,7.0,,,January 31
+University of Oxford,MSc Computer Science,Masters,Computer Science,12,40000,3.6,7.5,,,January 5
+University of Oxford,DPhil Computer Science,PhD,Computer Science,48,40000,3.8,7.5,,,January 5
+Imperial College London,MSc Computer Science,Masters,Computer Science,12,38000,3.5,7.0,,,May 1
+Imperial College London,MSc Artificial Intelligence,Masters,Artificial Intelligence,12,38000,3.6,7.0,,,May 1
+Imperial College London,PhD Computer Science,PhD,Computer Science,48,38000,3.7,7.0,,,May 1
+University of Edinburgh,MSc Artificial Intelligence,Masters,Artificial Intelligence,12,33000,3.4,7.0,,,March 31
+University of Edinburgh,MSc Data Science,Masters,Data Science,12,33000,3.4,7.0,,,March 31
+Technical University of Munich,MSc Informatics,Masters,Computer Science,24,0,3.0,6.5,,,May 31
+Technical University of Munich,MSc Data Engineering,Masters,Data Science,24,0,3.0,6.5,,,May 31
+Technical University of Munich,PhD Informatics,PhD,Computer Science,48,0,3.3,6.5,,,Rolling
+RWTH Aachen University,MSc Computer Science,Masters,Computer Science,24,1500,3.0,6.5,,,March 1
+RWTH Aachen University,MSc Electrical Engineering,Masters,Electrical Engineering,24,1500,3.0,6.5,,,March 1
+ETH Zurich,MSc Computer Science,Masters,Computer Science,24,1800,3.5,7.0,320,,December 15
+ETH Zurich,MSc Data Science,Masters,Data Science,24,1800,3.5,7.0,320,https://inf.ethz.ch/studies/master/master-ds.html,December 15
+ETH Zurich,PhD Computer Science,PhD,Computer Science,48,1800,3.8,7.0,325,https://inf.ethz.ch/doctorate.html,Rolling
+University of Melbourne,MS Computer Science,Masters,Computer Science,24,35000,3.2,6.5,,,October 31
+University of Melbourne,MS Data Science,Masters,Data Science,24,35000,3.2,6.5,,,October 31
+National University of Singapore,MSc Computer Science,Masters,Computer Science,18,30000,3.3,6.0,320,,March 15
+National University of Singapore,MSc Artificial Intelligence,Masters,Artificial Intelligence,18,30000,3.3,6.0,320,https://www.comp.nus.edu.sg/programmes/pg/mcomp-ai/,March 15
+National University of Singapore,PhD Computer Science,PhD,Computer Science,48,30000,3.5,6.5,320,https://www.comp.nus.edu.sg/programmes/pg/phdcs/,November 15
+KTH Royal Institute of Technology,MSc Computer Science,Masters,Computer Science,24,12000,3.0,6.5,,,January 15
+KTH Royal Institute of Technology,MSc Machine Learning,Masters,Artificial Intelligence,24,12000,3.0,6.5,,,January 15
