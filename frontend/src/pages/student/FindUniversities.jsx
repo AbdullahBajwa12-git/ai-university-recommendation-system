@@ -18,7 +18,14 @@ import { cn } from '../../utils/cn';
 // Maps saved StudentProfile/Preferences fields → wizard form field names.
 // Only returns keys that have a usable value, so it merges over defaults
 // without clobbering anything with null/empty.
-const STUDY_LEVEL_TO_DEGREE = { Bachelors: 'BS', Masters: 'MS', PhD: 'PhD' };
+const STUDY_LEVEL_TO_DEGREE = { 
+  Bachelors: 'Bachelors', 
+  BS: 'Bachelors', 
+  Masters: 'Masters', 
+  MS: 'Masters', 
+  MPhil: 'MPhil', 
+  PhD: 'PhD' 
+};
 const profileToWizard = (p) => {
   const out = {};
   if (p?.cgpa != null) out.cgpa = String(p.cgpa);
@@ -33,9 +40,14 @@ const profileToWizard = (p) => {
   if (Array.isArray(p?.preferred_countries) && p.preferred_countries.length) {
     out.countries = p.preferred_countries;
   }
-  if (Array.isArray(p?.preferred_fields) && p.preferred_fields.length) {
-    out.intended_major = p.preferred_fields[0];
+  
+  if (Array.isArray(p?.preferred_fields) && p.preferred_fields.length > 0) {
+    const field = p.preferred_fields[0];
+    out.intended_major = typeof field === 'string' ? field : (field?.name || String(field));
+  } else if (typeof p?.preferred_fields === 'string' && p.preferred_fields.trim()) {
+    out.intended_major = p.preferred_fields;
   }
+  
   return out;
 };
 

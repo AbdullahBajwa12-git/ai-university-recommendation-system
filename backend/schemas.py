@@ -141,6 +141,7 @@ class StudentRecommendationProfileIn(BaseModel):
     need_scholarship: Optional[bool] = None
     fully_funded_required: Optional[bool] = None
     partial_scholarship_accepted: Optional[bool] = None
+    budget_max: Optional[float] = None
 
     # Location
     continents: Optional[List[str]] = None

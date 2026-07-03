@@ -8,22 +8,33 @@ import {
 import Button from '../common/Button';
 import Input from '../common/Input';
 import { cn } from '../../utils/cn';
+import { ALL_DESTINATIONS } from '../../constants/studyDestinations';
 
 const STEPS = [
-  { id: 1, title: 'Personal', icon: User },
-  { id: 2, title: 'Academic', icon: GraduationCap },
-  { id: 3, title: 'Target', icon: BrainCircuit },
-  { id: 4, title: 'Scores', icon: Languages },
-  { id: 5, title: 'Location', icon: MapPin },
-  { id: 6, title: 'Prefs', icon: CheckCircle2 }
+  { id: 1, title: 'Personal Details', icon: User },
+  { id: 2, title: 'Target Program', icon: BrainCircuit },
+  { id: 3, title: 'Scores', icon: Languages },
+  { id: 4, title: 'Location', icon: MapPin },
+  { id: 5, title: 'Budget', icon: DollarSign },
+  { id: 6, title: 'Review', icon: CheckCircle2 }
 ];
 
 const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialData, prefillSource }) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [countrySearch, setCountrySearch] = useState('');
+  const [avoidSearch, setAvoidSearch] = useState('');
 
   const defaultVals = {
     continents: [],
     countries: [],
+    avoid_countries: [],
+    open_to_all_destinations: false,
+    budget_mode: 'total',
+    currency: 'USD',
+    total_budget: '',
+    budget_period: 'per_year',
+    max_course_tuition_fee: '',
+    max_application_fee: '',
     degree_completed: false,
     need_scholarship: false,
     fully_funded_required: false,
@@ -36,11 +47,10 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
     ...initialData,
   };
 
-  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm({
+  const { register, handleSubmit, watch, setValue, reset, trigger, formState: { errors } } = useForm({
     defaultValues: defaultVals,
   });
 
-  // Re-populate form whenever initialData changes (new history item clicked)
   React.useEffect(() => {
     if (initialData) {
       reset({ ...defaultVals, ...initialData });
@@ -50,11 +60,73 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
 
   if (!isOpen) return null;
 
-  const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, STEPS.length));
+  const nextStep = async () => {
+    let fieldsToValidate = [];
+    if (currentStep === 1) {
+      fieldsToValidate = ['full_name', 'email', 'country', 'current_degree_level', 'cgpa'];
+    } else if (currentStep === 2) {
+      fieldsToValidate = ['degree_applying_for', 'intended_major'];
+    }
+    
+    if (fieldsToValidate.length > 0) {
+      const isValid = await trigger(fieldsToValidate);
+      if (!isValid) return;
+    }
+    setCurrentStep(prev => Math.min(prev + 1, STEPS.length));
+  };
+
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
   const handleFormSubmit = (data) => {
-    onSubmit(data);
+    const payload = { ...data };
+    
+    payload.continents = [];
+    
+    if (payload.budget_mode === 'total' && payload.total_budget) {
+      payload.budget_max = parseFloat(payload.total_budget);
+    } else if (payload.budget_mode === 'detailed' && payload.max_course_tuition_fee) {
+      payload.budget_max = parseFloat(payload.max_course_tuition_fee);
+    }
+    
+    if (payload.open_to_all_destinations) {
+      const avoided = payload.avoid_countries || [];
+      payload.countries = ALL_DESTINATIONS.filter(c => !avoided.includes(c));
+    } else {
+      payload.countries = payload.countries || [];
+      if (payload.countries.length === 0) {
+        payload.countries = ALL_DESTINATIONS;
+      }
+    }
+    
+    delete payload.avoid_countries;
+    delete payload.open_to_all_destinations;
+    delete payload.budget_mode;
+    delete payload.currency;
+    delete payload.total_budget;
+    delete payload.budget_period;
+    delete payload.max_course_tuition_fee;
+    delete payload.max_application_fee;
+
+    ['cgpa', 'graduation_year', 'ielts', 'toefl', 'gre', 'gmat', 'sat'].forEach(k => {
+      if (payload[k] !== undefined && payload[k] !== null && payload[k] !== '') {
+        payload[k] = parseFloat(payload[k]);
+      } else {
+        delete payload[k];
+      }
+    });
+
+    payload.year_gap = 0;
+    payload.num_publications = 0;
+    payload.num_research_papers = 0;
+    payload.research_experience = "No";
+    payload.work_experience = "No";
+    
+    payload.public_only = false;
+    payload.research_focused = false;
+    payload.industry_focused = false;
+    payload.top_ranked_only = false;
+
+    onSubmit(payload);
   };
 
   const watchContinents = watch('continents') || [];
@@ -69,13 +141,6 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
     }
   };
 
-  const continents = ['North America', 'Europe', 'Asia', 'Australia', 'Africa'];
-  const countries = [
-    'USA', 'Canada', 'UK', 'Germany', 'Australia', 'Italy', 'France', 
-    'Netherlands', 'Sweden', 'Norway', 'Finland', 'China', 'Japan', 
-    'South Korea', 'Singapore'
-  ];
-
   const renderStep = () => {
     switch(currentStep) {
       case 1:
@@ -83,20 +148,46 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-sm font-semibold">Full Name</label>
-                <Input {...register('full_name', { required: 'Name is required' })} placeholder="Enter your full name" />
+                <label className="text-sm font-semibold">Full Name *</label>
+                <Input {...register('full_name', { required: 'Name is required' })} placeholder="Enter your full name" autoComplete="name" />
+                {errors.full_name && <span className="text-xs text-red-500">{errors.full_name.message}</span>}
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-semibold">Email</label>
-                <Input {...register('email', { required: 'Email is required' })} type="email" placeholder="email@example.com" />
+                <label className="text-sm font-semibold">Email *</label>
+                <Input {...register('email', { 
+                  required: 'Email is required',
+                  pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Invalid email address' }
+                })} type="email" placeholder="email@example.com" autoComplete="email" id="uf_email" />
+                {errors.email && <span className="text-xs text-red-500">{errors.email.message}</span>}
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-semibold">Native Country</label>
-                <Input {...register('country')} placeholder="Your current country" />
+                <label className="text-sm font-semibold">Home Country *</label>
+                <Input {...register('country', { required: 'Country is required' })} placeholder="Your current country" autoComplete="country-name" />
+                {errors.country && <span className="text-xs text-red-500">{errors.country.message}</span>}
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-semibold">Nationality</label>
-                <Input {...register('nationality')} placeholder="Your nationality" />
+                <label className="text-sm font-semibold">Current Degree Level *</label>
+                <select {...register('current_degree_level', { required: 'Degree level is required' })} className="w-full h-11 rounded-xl border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none">
+                  <option value="">-- Select Degree --</option>
+                  <option value="Bachelors">Bachelors</option>
+                  <option value="Masters">Masters</option>
+                  <option value="MPhil">MPhil</option>
+                  <option value="PhD">PhD</option>
+                </select>
+                {errors.current_degree_level && <span className="text-xs text-red-500">{errors.current_degree_level.message}</span>}
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-semibold">Current University</label>
+                <Input {...register('current_university')} placeholder="University Name" autoComplete="off" id="uf_current_university" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-semibold">Current CGPA *</label>
+                <Input {...register('cgpa', { required: 'CGPA is required' })} type="number" step="0.01" placeholder="e.g. 3.8" />
+                {errors.cgpa && <span className="text-xs text-red-500">{errors.cgpa.message}</span>}
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-semibold">Graduation Year</label>
+                <Input {...register('graduation_year')} type="number" placeholder="e.g. 2025" />
               </div>
             </div>
           </div>
@@ -104,68 +195,15 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
       case 2:
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-sm font-semibold">Current Degree Level</label>
-                <select {...register('current_degree_level')} className="w-full h-11 rounded-xl border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none">
-                  <option value="Intermediate">Intermediate</option>
-                  <option value="Diploma">Diploma</option>
-                  <option value="BS/Bachelor">BS/Bachelor</option>
-                  <option value="MS/MPhil">MS/MPhil</option>
-                  <option value="PhD">PhD</option>
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-semibold">Current University</label>
-                <Input {...register('current_university')} placeholder="University Name" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-semibold">Current CGPA</label>
-                <Input {...register('cgpa')} type="number" step="0.01" placeholder="e.g. 3.8" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-semibold">Graduation Year</label>
-                <Input {...register('graduation_year')} type="number" placeholder="e.g. 2025" />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <label className="text-sm font-semibold text-xs">Total Credits</label>
-                <Input {...register('total_credits')} type="number" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-semibold text-xs">Semester</label>
-                <Input {...register('current_semester')} type="number" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-semibold text-xs">Year Gap</label>
-                <Input {...register('year_gap')} type="number" />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-sm font-semibold text-xs">Publications</label>
-                <Input {...register('num_publications')} type="number" placeholder="Number of publications" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-semibold text-xs">Research Papers</label>
-                <Input {...register('num_research_papers')} type="number" placeholder="Number of research papers" />
-              </div>
-            </div>
-          </div>
-        );
-      case 3:
-        return (
-          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="space-y-4">
               <div className="space-y-1">
-                <label className="text-lg font-bold">Target Study Level</label>
+                <label className="text-lg font-bold">Target Study Level *</label>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {['BS', 'MS', 'MPhil', 'PhD'].map(level => (
+                  {['Bachelors', 'Masters', 'MPhil', 'PhD'].map(level => (
                     <button
                       key={level}
                       type="button"
-                      onClick={() => setValue('degree_applying_for', level)}
+                      onClick={() => { setValue('degree_applying_for', level); trigger('degree_applying_for'); }}
                       className={cn(
                         "p-4 rounded-2xl border-2 transition-all font-bold",
                         watch('degree_applying_for') === level 
@@ -177,33 +215,19 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
                     </button>
                   ))}
                 </div>
+                {/* Hidden input to register degree_applying_for */}
+                <input type="hidden" {...register('degree_applying_for', { required: 'Target Study Level is required' })} />
+                {errors.degree_applying_for && <span className="text-xs text-red-500">{errors.degree_applying_for.message}</span>}
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-semibold">Intended Major</label>
-                <Input {...register('intended_major')} placeholder="e.g. Computer Science, Artificial Intelligence" />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-semibold text-xs">Research Experience</label>
-                  <textarea 
-                    {...register('research_experience')} 
-                    className="w-full p-3 rounded-xl border border-input bg-background min-h-[80px] text-sm focus:ring-2 focus:ring-primary outline-none"
-                    placeholder="Briefly describe your research experience..."
-                  ></textarea>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-semibold text-xs">Work Experience</label>
-                  <textarea 
-                    {...register('work_experience')} 
-                    className="w-full p-3 rounded-xl border border-input bg-background min-h-[80px] text-sm focus:ring-2 focus:ring-primary outline-none"
-                    placeholder="Briefly describe your work experience..."
-                  ></textarea>
-                </div>
+                <label className="text-sm font-semibold">Intended Major / Course *</label>
+                <Input {...register('intended_major', { required: 'Intended major is required' })} placeholder="e.g. Computer Science, Artificial Intelligence" autoComplete="off" id="uf_intended_major" />
+                {errors.intended_major && <span className="text-xs text-red-500">{errors.intended_major.message}</span>}
               </div>
             </div>
           </div>
         );
-      case 4:
+      case 3:
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <p className="text-sm text-gray-500 italic">Language scores are optional but helpful for accurate recommendations.</p>
@@ -231,50 +255,174 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
             </div>
           </div>
         );
+      case 4:
+        return (
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold mb-3">Preferred Study Destinations</label>
+                <div className="flex items-center gap-3 mb-4">
+                  <input type="checkbox" id="open_to_all" {...register('open_to_all_destinations')} className="w-5 h-5 rounded text-primary" />
+                  <label htmlFor="open_to_all" className="text-sm font-medium">I am open to more destinations (Any of the supported destinations)</label>
+                </div>
+                
+                {!watch('open_to_all_destinations') && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-gray-500">Select your preferred countries:</p>
+                    
+                    {watchCountries.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {watchCountries.map(c => (
+                          <span key={c} className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-semibold">
+                            {c}
+                            <button type="button" onClick={(e) => { e.stopPropagation(); toggleItem('countries', c); }} className="hover:text-indigo-900 dark:hover:text-indigo-100">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input 
+                        placeholder="Search for a country..." 
+                        value={countrySearch} 
+                        onChange={(e) => setCountrySearch(e.target.value)}
+                        className="pl-9 mb-2"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 border rounded-xl">
+                      {ALL_DESTINATIONS
+                        .filter(c => !watchCountries.includes(c) && c.toLowerCase().includes(countrySearch.toLowerCase()))
+                        .map(c => (
+                        <button
+                          key={c} type="button"
+                          onClick={() => { toggleItem('countries', c); setCountrySearch(''); }}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-indigo-300"
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {watch('open_to_all_destinations') && (
+                  <div className="space-y-2 mt-4">
+                    <p className="text-xs text-red-500 font-semibold">Avoid these countries (Optional):</p>
+                    
+                    {watch('avoid_countries')?.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {watch('avoid_countries').map(c => (
+                          <span key={c} className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-full text-xs font-semibold">
+                            {c}
+                            <button type="button" onClick={(e) => { e.stopPropagation(); toggleItem('avoid_countries', c); }} className="hover:text-red-900 dark:hover:text-red-100">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input 
+                        placeholder="Search for a country to avoid..." 
+                        value={avoidSearch} 
+                        onChange={(e) => setAvoidSearch(e.target.value)}
+                        className="pl-9 mb-2"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 border border-red-100 dark:border-red-900/50 rounded-xl">
+                      {ALL_DESTINATIONS
+                        .filter(c => !(watch('avoid_countries') || []).includes(c) && c.toLowerCase().includes(avoidSearch.toLowerCase()))
+                        .map(c => (
+                        <button
+                          key={c} type="button"
+                          onClick={() => { toggleItem('avoid_countries', c); setAvoidSearch(''); }}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-red-300"
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
       case 5:
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-bold mb-3">Target Continents</label>
-                <div className="flex flex-wrap gap-2">
-                  {continents.map(c => (
-                    <button
-                      key={c} type="button"
-                      onClick={() => toggleItem('continents', c)}
-                      className={cn(
-                        "px-4 py-2 rounded-full text-sm font-medium transition-all border",
-                        watchContinents.includes(c) 
-                          ? "bg-primary text-white border-primary" 
-                          : "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400"
-                      )}
-                    >
-                      {c}
-                    </button>
-                  ))}
+                <label className="block text-sm font-bold mb-3">Budget Preferences</label>
+                
+                <div className="flex gap-4 mb-4">
+                  <label className="flex items-center gap-2">
+                    <input type="radio" value="total" {...register('budget_mode')} className="w-4 h-4 text-primary" />
+                    <span className="text-sm">Total Budget</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input type="radio" value="detailed" {...register('budget_mode')} className="w-4 h-4 text-primary" />
+                    <span className="text-sm">Detailed Budget</span>
+                  </label>
                 </div>
+
+                {watch('budget_mode') === 'total' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold">Currency</label>
+                      <select {...register('currency')} className="w-full p-2 rounded-lg border border-input text-sm bg-background">
+                        <option value="USD">USD ($)</option>
+                        <option value="EUR">EUR (€)</option>
+                        <option value="GBP">GBP (£)</option>
+                        <option value="PKR">PKR (₨)</option>
+                        <option value="CAD">CAD ($)</option>
+                        <option value="AUD">AUD ($)</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold">Total Budget Amount</label>
+                      <Input {...register('total_budget')} type="number" placeholder="e.g. 50000" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold">Period</label>
+                      <select {...register('budget_period')} className="w-full p-2 rounded-lg border border-input text-sm bg-background">
+                        <option value="per_year">Per Year</option>
+                        <option value="full_degree">Full Degree</option>
+                      </select>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold">Currency</label>
+                      <select {...register('currency')} className="w-full p-2 rounded-lg border border-input text-sm bg-background">
+                        <option value="USD">USD ($)</option>
+                        <option value="EUR">EUR (€)</option>
+                        <option value="GBP">GBP (£)</option>
+                        <option value="PKR">PKR (₨)</option>
+                        <option value="CAD">CAD ($)</option>
+                        <option value="AUD">AUD ($)</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold">Max Tuition Fee</label>
+                      <Input {...register('max_course_tuition_fee')} type="number" placeholder="e.g. 30000" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold">Max Application Fee</label>
+                      <Input {...register('max_application_fee')} type="number" placeholder="e.g. 100" />
+                    </div>
+                  </div>
+                )}
               </div>
-              <div>
-                <label className="block text-sm font-bold mb-3">Preferred Countries</label>
-                <div className="flex flex-wrap gap-2">
-                  {countries.map(c => (
-                    <button
-                        key={c} type="button"
-                        onClick={() => toggleItem('countries', c)}
-                        className={cn(
-                          "px-3 py-2 rounded-xl text-xs font-bold transition-all border",
-                          watchCountries.includes(c) 
-                            ? "bg-indigo-500 text-white border-indigo-500 shadow-md shadow-indigo-200" 
-                            : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-500"
-                        )}
-                      >
-                        {c}
-                      </button>
-                  ))}
-                </div>
-              </div>
+              
               <div className="pt-4 border-t border-dashed">
-                <label className="block text-sm font-bold mb-3">Financial Info</label>
+                <label className="block text-sm font-bold mb-3">Financial Needs</label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-800 cursor-pointer">
                     <input type="checkbox" {...register('need_scholarship')} className="w-4 h-4 rounded text-primary" />
@@ -292,33 +440,66 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
       case 6:
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 text-left">
-            <h3 className="font-bold text-lg">Final Preferences</h3>
-            <div className="space-y-3">
-              {[
-                { id: 'public_only', label: 'Public Universities Only', icon: Building2 },
-                { id: 'research_focused', label: 'Research Focused Institutions', icon: Beaker },
-                { id: 'industry_focused', label: 'Industry & Career Focused', icon: Briefcase },
-                { id: 'top_ranked_only', label: 'Top Tier Ranked Universities Only', icon: Star }
-              ].map(item => (
-                <label key={item.id} className="flex items-center justify-between p-4 rounded-2xl border-2 border-gray-50 dark:border-gray-800 hover:border-primary/20 transition-all cursor-pointer group">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                      {item.icon && <item.icon className="h-5 w-5" />}
-                    </div>
-                    <span className="font-bold text-sm">{item.label}</span>
+            <h3 className="font-bold text-lg">Review Information</h3>
+            
+            <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700 text-sm space-y-4">
+              
+              <div>
+                <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Personal & Academic</h4>
+                <div className="grid grid-cols-2 gap-y-2 gap-x-4">
+                  <div><span className="text-gray-500">Name:</span> {watch('full_name') || 'N/A'}</div>
+                  <div><span className="text-gray-500">Email:</span> {watch('email') || 'N/A'}</div>
+                  <div><span className="text-gray-500">Home Country:</span> {watch('country') || 'N/A'}</div>
+                  <div><span className="text-gray-500">Current Level:</span> {watch('current_degree_level') || 'N/A'}</div>
+                  <div><span className="text-gray-500">Current Uni:</span> {watch('current_university') || 'N/A'}</div>
+                  <div><span className="text-gray-500">CGPA:</span> {watch('cgpa') || 'N/A'}</div>
+                  <div><span className="text-gray-500">Grad Year:</span> {watch('graduation_year') || 'N/A'}</div>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-2">
+                <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Target Program</h4>
+                <div className="grid grid-cols-2 gap-y-2 gap-x-4">
+                  <div><span className="text-gray-500">Degree:</span> {watch('degree_applying_for') || 'N/A'}</div>
+                  <div><span className="text-gray-500">Major:</span> {watch('intended_major') || 'N/A'}</div>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-2">
+                <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Location & Financials</h4>
+                <div className="grid grid-cols-1 gap-y-2">
+                  <div>
+                    <span className="text-gray-500">Destinations:</span> {
+                      watch('open_to_all_destinations') ? "Open to all supported" : (watchCountries.length ? watchCountries.join(", ") : "None selected")
+                    }
                   </div>
-                  <input type="checkbox" {...register(item.id)} className="w-5 h-5 rounded-md text-primary accent-primary" />
-                </label>
-              ))}
+                  {watch('open_to_all_destinations') && watch('avoid_countries')?.length > 0 && (
+                    <div><span className="text-gray-500">Avoiding:</span> {watch('avoid_countries').join(", ")}</div>
+                  )}
+                  <div>
+                    <span className="text-gray-500">Budget:</span> {
+                      watch('budget_mode') === 'total' && watch('total_budget') ? `${watch('total_budget')} ${watch('currency')} (${watch('budget_period')})` :
+                      watch('budget_mode') === 'detailed' && watch('max_course_tuition_fee') ? `Max Tuition: ${watch('max_course_tuition_fee')} ${watch('currency')}` :
+                      "Not specified"
+                    }
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Funding Needed:</span> {
+                      watch('fully_funded_required') ? "Fully Funded" : (watch('need_scholarship') ? "Scholarship Needed" : "No Preference")
+                    }
+                  </div>
+                </div>
+              </div>
+
             </div>
             
-            <div className="bg-blue-50 dark:bg-blue-900/10 p-6 rounded-2xl border border-blue-100 dark:border-blue-900/30 flex items-start gap-4">
-              <div className="h-10 w-10 shrink-0 rounded-full bg-blue-500 flex items-center justify-center text-white">
-                <BrainCircuit className="h-6 w-6" />
+            <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30 flex items-start gap-4">
+              <div className="h-8 w-8 shrink-0 rounded-full bg-blue-500 flex items-center justify-center text-white mt-1">
+                <BrainCircuit className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-sm font-black text-blue-600 uppercase tracking-widest mb-1">AI Recommendation</p>
-                <p className="text-xs text-blue-800/70 dark:text-blue-300">Our AI will analyze your profile and preferences to find your dream universities. This may take 10-15 seconds.</p>
+                <p className="text-sm font-black text-blue-600 uppercase tracking-widest mb-1">AI Match Processing</p>
+                <p className="text-xs text-blue-800/70 dark:text-blue-300">Submit to securely match against our database. The AI will strictly follow your criteria and verify program availability.</p>
               </div>
             </div>
           </div>
@@ -380,7 +561,7 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
         <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-gray-900">
           <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
             <div>
-              <h3 className="text-xl font-bold">{STEPS[currentStep-1].title} Details</h3>
+              <h3 className="text-xl font-bold">{STEPS[currentStep-1].title}</h3>
               <p className="text-xs text-gray-500">Step {currentStep} of {STEPS.length}</p>
             </div>
             <button 
@@ -427,7 +608,10 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
               <Button 
                 type="button"
                 className="gap-2 rounded-2xl px-12 bg-gradient-to-br from-indigo-500 to-purple-600 border-none hover:shadow-indigo-500/30"
-                onClick={handleSubmit(handleFormSubmit)}
+                onClick={async () => {
+                  const isValid = await trigger();
+                  if (isValid) handleSubmit(handleFormSubmit)();
+                }}
                 isLoading={isLoading}
               >
                 Generate My Recommendations <Sparkles className="h-4 w-4" />
@@ -449,11 +633,6 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
   );
 };
 
-// Additional icons not imported or needed
-const Building2 = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M8 10h.01"/><path d="M16 10h.01"/><path d="M8 14h.01"/><path d="M16 14h.01"/></svg>;
-const Beaker = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 3h15"/><path d="M6 3v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3"/><path d="M6 14h12"/></svg>;
-const Briefcase = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>;
-const Star = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
-const Sparkles = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M3 5h4"/><path d="M21 17v4"/><path d="M19 19h4"/></svg>;
+const Sparkles = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1-1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M3 5h4"/><path d="M21 17v4"/><path d="M19 19h4"/></svg>;
 
 export default UniversityFinderModal;
