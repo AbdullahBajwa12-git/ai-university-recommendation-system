@@ -164,6 +164,7 @@ class StudentRecommendationProfileIn(BaseModel):
 # ── AI Recommendation Schemas ────────────────────────────────────────────────
 
 class RecommendedUniversityOut(BaseModel):
+    university_id: Optional[str] = None
     university_name: str
     country: str
     city: Optional[str] = None
@@ -207,6 +208,7 @@ class RecommendationHistoryItem(BaseModel):
 # ── Saved University Schemas ─────────────────────────────────────────────────
 
 class SaveUniversityRequest(BaseModel):
+    university_id: Optional[str] = None
     university_name: str
     country: str
     city: Optional[str] = None
@@ -227,6 +229,7 @@ class SaveUniversityRequest(BaseModel):
 
 class SavedUniversityOut(BaseModel):
     id: UUID
+    university_id: Optional[str] = None
     university_name: str
     country: str
     city: Optional[str] = None

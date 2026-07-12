@@ -51,6 +51,17 @@ const profileToWizard = (p) => {
     return out;
 };
 
+const isSameUniversity = (a, b) => {
+    if (a.university_id && b.university_id) {
+        return a.university_id === b.university_id;
+    }
+    const normNameA = String(a.university_name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const normNameB = String(b.university_name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const normCountryA = String(a.country || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const normCountryB = String(b.country || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    return normNameA === normNameB && normCountryA === normCountryB;
+};
+
 const FindUniversities = () => {
     const {
         history,
@@ -461,6 +472,7 @@ const FindUniversities = () => {
                                             key={idx}
                                             university={uni}
                                             onSave={() => saveUniversity({
+                                                university_id: uni.university_id || null,
                                                 university_name: uni.university_name,
                                                 country: uni.country,
                                                 city: uni.city || null,
@@ -480,14 +492,14 @@ const FindUniversities = () => {
                                                 session_id: activeResults?.session_id || null
                                             })}
                                             onUnsave={() => {
-                                                const savedItem = saved.find(s => s.university_name === uni.university_name);
+                                                const savedItem = saved.find(s => isSameUniversity(s, uni));
                                                 if (savedItem) unsaveUniversity(savedItem.id);
                                             }}
-                                            isSaved={saved.some(s => s.university_name === uni.university_name)}
+                                            isSaved={saved.some(s => isSameUniversity(s, uni))}
                                             isSaving={isSaving}
                                             showCompare={true}
                                             onCompareToggle={() => toggleCompare(uni)}
-                                            isComparing={comparingItems.some(s => s.university_name === uni.university_name)}
+                                            isComparing={comparingItems.some(s => isSameUniversity(s, uni))}
                                         />
                                     ))
                                 ) : (

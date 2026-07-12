@@ -60,6 +60,18 @@ export const useRecommendations = () => {
         return await recommendationService.getSessionDetails(sessionId);
     };
 
+    // Mutation for deleting history session
+    const deleteHistoryMutation = useMutation({
+        mutationFn: recommendationService.deleteHistory,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['recommendation-history'] });
+            toast.success('History deleted successfully');
+        },
+        onError: () => {
+            toast.error('Failed to delete history');
+        },
+    });
+
     return {
         history: historyQuery.data || [],
         isLoadingHistory: historyQuery.isLoading,
@@ -71,5 +83,6 @@ export const useRecommendations = () => {
         isSaving: saveUniversityMutation.isPending,
         unsaveUniversity: unsaveUniversityMutation.mutate,
         getSessionDetails,
+        deleteHistory: deleteHistoryMutation.mutate,
     };
 };

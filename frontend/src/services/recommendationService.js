@@ -49,6 +49,14 @@ export const recommendationService = {
   unsaveUniversity: async (id) => {
     const response = await apiClient.delete(`/universities/saved/${id}`);
     return response.data;
+  },
+
+  /**
+   * Delete recommendation history
+   */
+  deleteHistory: async (sessionId) => {
+    const response = await apiClient.delete(`/recommendations/history/${sessionId}`);
+    return response.data;
   }
 };
 

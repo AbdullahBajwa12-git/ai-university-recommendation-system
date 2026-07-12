@@ -3,6 +3,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 from beanie import Document, Link, Indexed
 from pydantic import Field, EmailStr, BaseModel as PydanticBaseModel
+from pymongo import IndexModel, ASCENDING
 
 # ── USERS ───────────────────────────────────────────────────────────────────
 
@@ -137,6 +138,8 @@ class SavedUniversity(Document):
     """User-bookmarked university from a recommendation session."""
     id: UUID = Field(default_factory=uuid4)
     user: Link[User]
+    user_id: Optional[str] = None
+    university_id: Optional[str] = None
     university_name: str
     country: str
     city: Optional[str] = None
@@ -159,6 +162,16 @@ class SavedUniversity(Document):
 
     class Settings:
         name = "saved_universities"
+        indexes = [
+            IndexModel(
+                [("user_id", ASCENDING), ("university_id", ASCENDING)],
+                unique=True,
+                partialFilterExpression={
+                    "user_id": {"$type": "string"},
+                    "university_id": {"$type": "string"}
+                }
+            )
+        ]
 
 # ── COUNTRIES & FIELDS ──────────────────────────────────────────────────────
 

@@ -15,6 +15,9 @@ import auth
 from database import init_db
 from constants import STUDY_DESTINATIONS, ALL_DESTINATIONS
 from beanie.operators import In
+from pymongo.errors import DuplicateKeyError
+from bson.errors import InvalidId
+from bson import ObjectId
 
 # ── LIFECYCLE ───────────────────────────────────────────────────────────────
 
@@ -368,8 +371,41 @@ async def save_university(
     data: schemas.SaveUniversityRequest,
     current_user: models.User = Depends(auth.get_current_user)
 ):
+    norm_name = data.university_name.strip().lower()
+    norm_country = data.country.strip().lower()
+
+    if data.university_id:
+        try:
+            uid = ObjectId(data.university_id)
+        except InvalidId:
+            raise HTTPException(status_code=400, detail="Invalid university_id format")
+
+        db_u = await models.University.get(uid)
+        if not db_u:
+            raise HTTPException(status_code=404, detail="University not found in database")
+
+        if db_u.university_name.strip().lower() != norm_name or db_u.country.strip().lower() != norm_country:
+            raise HTTPException(status_code=400, detail="University identity mismatch")
+
+        existing = await models.SavedUniversity.find_one(
+            models.SavedUniversity.user.id == current_user.id,
+            models.SavedUniversity.university_id == data.university_id
+        )
+        if existing:
+            return existing
+
+    if not data.university_id:
+        existing_list = await models.SavedUniversity.find(
+            models.SavedUniversity.user.id == current_user.id
+        ).to_list()
+        for record in existing_list:
+            if record.university_name.strip().lower() == norm_name and record.country.strip().lower() == norm_country:
+                return record
+
     saved = models.SavedUniversity(
         user=current_user,
+        user_id=str(current_user.id),
+        university_id=data.university_id,
         university_name=data.university_name,
         country=data.country,
         city=data.city,
@@ -388,7 +424,19 @@ async def save_university(
         reason_for_match=data.reason_for_match,
         session_id=data.session_id,
     )
-    await saved.insert()
+
+    try:
+        await saved.insert()
+    except DuplicateKeyError:
+        if data.university_id:
+            existing = await models.SavedUniversity.find_one(
+                models.SavedUniversity.user_id == str(current_user.id),
+                models.SavedUniversity.university_id == data.university_id
+            )
+            if existing:
+                return existing
+        raise HTTPException(status_code=500, detail="Failed to save university")
+
     return saved
 
 @app.delete("/api/v1/universities/saved/{saved_id}")
@@ -658,6 +706,7 @@ Candidate Pool:
                 deadline = "Verify on official website"
 
             final_universities.append({
+                "university_id":      str(db_u.id),
                 "university_name":    db_u.university_name,
                 "country":            db_u.country,
                 "city":               db_u.city,
@@ -742,6 +791,22 @@ async def get_recommendation_session(
         "total_count": session.total_count,
         "created_at": session.created_at,
     }
+
+@app.delete("/api/v1/recommendations/history/{session_id}")
+async def delete_recommendation_history(
+    session_id: UUID,
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    session = await models.RecommendationSession.find_one(
+        models.RecommendationSession.id == session_id,
+        models.RecommendationSession.user.id == current_user.id
+    )
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    await session.delete()
+    return {"message": "History deleted successfully"}
+
 
 # ── AI CHAT ENDPOINT ────────────────────────────────────────────────────────
 
