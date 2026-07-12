@@ -83,6 +83,7 @@ export const useRecommendations = () => {
         isSaving: saveUniversityMutation.isPending,
         unsaveUniversity: unsaveUniversityMutation.mutate,
         getSessionDetails,
-        deleteHistory: deleteHistoryMutation.mutate,
+        deleteHistory: deleteHistoryMutation.mutateAsync,
+        isDeletingHistory: deleteHistoryMutation.isPending,
     };
 };

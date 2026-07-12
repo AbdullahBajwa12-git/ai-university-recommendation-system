@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Sparkles, History, Bookmark, Search,
     Download, FileText, BarChart3, ArrowRight,
@@ -74,6 +74,8 @@ const FindUniversities = () => {
         isLoadingHistory,
         isLoadingSaved,
         getSessionDetails,
+        deleteHistory,
+        isDeletingHistory,
     } = useRecommendations();
 
     const { localHistory, saveToHistory, removeFromHistory, clearHistory } = useSearchHistory();
@@ -87,6 +89,40 @@ const FindUniversities = () => {
     const [prefillSource, setPrefillSource] = useState(null); // 'profile' | 'history' | null
     const [loadingHistoryItem, setLoadingHistoryItem] = useState(null); // session_id being loaded
     const [historyTab, setHistoryTab] = useState('local'); // 'local' | 'remote'
+    const [sessionToDelete, setSessionToDelete] = useState(null);
+    const [isDeletingSession, setIsDeletingSession] = useState(false);
+    const dialogRef = useRef(null);
+
+    useEffect(() => {
+        if (sessionToDelete) {
+            dialogRef.current?.focus();
+
+            const handleKeyDown = (e) => {
+                if (e.key === 'Escape' && !isDeletingSession && !isDeletingHistory) {
+                    setSessionToDelete(null);
+                }
+            };
+            document.addEventListener('keydown', handleKeyDown);
+            return () => document.removeEventListener('keydown', handleKeyDown);
+        }
+    }, [sessionToDelete, isDeletingSession, isDeletingHistory]);
+
+    const handleDeleteConfirm = async () => {
+        if (!sessionToDelete) return;
+        setIsDeletingSession(true);
+        try {
+            await deleteHistory(sessionToDelete.session_id);
+            if (activeResults?.session_id === sessionToDelete.session_id) {
+                setActiveResults(null);
+                setViewMode('new');
+            }
+            setSessionToDelete(null);
+        } catch {
+            // Toast handles the error via useRecommendations hook
+        } finally {
+            setIsDeletingSession(false);
+        }
+    };
 
     // Open a fresh wizard, pre-filling from the saved profile/preferences when available.
     // Profile fetch is best-effort: failure or empty data just opens the default form.
@@ -387,7 +423,7 @@ const FindUniversities = () => {
                                                         <div className="h-4 w-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
                                                     </div>
                                                 )}
-                                                <p className="text-xs font-bold text-gray-900 dark:text-white line-clamp-1 group-hover:text-indigo-600 transition-colors">
+                                                <p className="text-xs font-bold text-gray-900 dark:text-white line-clamp-1 group-hover:text-indigo-600 transition-colors pr-6">
                                                     {session.intended_major || 'Any Major'} · {session.degree_applying_for || 'Any Degree'}
                                                 </p>
                                                 <p className="text-[10px] text-gray-400 mt-0.5">
@@ -396,6 +432,17 @@ const FindUniversities = () => {
                                                 <p className="text-[10px] text-indigo-400 font-bold mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     Click to restore & rerun ↗
                                                 </p>
+                                                <button
+                                                    type="button"
+                                                    aria-label="Delete history"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSessionToDelete(session);
+                                                    }}
+                                                    className="absolute top-2 right-2 opacity-50 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-gray-400 hover:text-red-500 transition-all"
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                </button>
                                             </button>
                                         ))}
                                     </div>
@@ -548,6 +595,47 @@ const FindUniversities = () => {
                 onClose={() => setIsCompareModalOpen(false)}
                 universities={comparingItems}
             />
+
+            {/* Local Confirmation Modal for History Deletion */}
+            {sessionToDelete && (
+                <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in">
+                    <div
+                        ref={dialogRef}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="delete-dialog-title"
+                        aria-describedby="delete-dialog-description"
+                        tabIndex={-1}
+                        className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl max-w-sm w-full mx-4 relative focus:outline-none"
+                    >
+                        <h3 id="delete-dialog-title" className="text-lg font-bold text-gray-900 dark:text-white mb-2">Delete History</h3>
+                        <p id="delete-dialog-description" className="text-sm text-gray-500 mb-6">
+                            Are you sure you want to permanently remove this recommendation history? This action cannot be undone.
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <Button
+                                variant="outline"
+                                onClick={() => setSessionToDelete(null)}
+                                disabled={isDeletingSession || isDeletingHistory}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="primary"
+                                onClick={handleDeleteConfirm}
+                                disabled={isDeletingSession || isDeletingHistory}
+                                className="bg-red-500 hover:bg-red-600 border-red-500 text-white min-w-[120px]"
+                            >
+                                {isDeletingSession || isDeletingHistory ? (
+                                    <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
+                                ) : (
+                                    "Delete History"
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
