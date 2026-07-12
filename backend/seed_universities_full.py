@@ -20,6 +20,8 @@ import math
 from decimal import Decimal, InvalidOperation
 from dataclasses import dataclass, field
 from typing import List, Dict, Set, Any
+from datetime import datetime, timezone, timedelta
+import uuid
 
 # ---------------------------------------------------------------------------
 # Live seed path (Beanie). Not touched by Phase 5A-2.
@@ -122,6 +124,11 @@ def safe_display(value, max_len=140):
     if len(s) > max_len:
         return s[:max_len] + "..."
     return s
+
+def get_bson_compatible_utc_now() -> datetime:
+    """Returns a naive UTC datetime with millisecond precision (compatible with MongoDB BSON)."""
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    return now.replace(microsecond=(now.microsecond // 1000) * 1000)
 
 # ---------------------------------------------------------------------------
 # Shared helpers: URL normalization for comparison
@@ -942,9 +949,18 @@ def main():
                        help="Compare CSVs against MongoDB without writing")
     group.add_argument("--validate-only", action="store_true",
                        help="Validate CSVs without DB access")
+    group.add_argument("--apply", action="store_true",
+                       help="Apply CSV changes to MongoDB atomically")
+    parser.add_argument("--confirm-apply", action="store_true",
+                        help="Must be used with --apply to execute changes")
     parser.add_argument("--csv-dir", type=str, default="data",
                         help="Directory containing CSV files")
     args = parser.parse_args()
+
+    if args.confirm_apply and not args.apply:
+        parser.error("--confirm-apply can only be used with --apply")
+    if args.apply and not args.confirm_apply:
+        parser.error("--apply requires --confirm-apply")
 
     SCRIPT_DIR = Path(__file__).resolve().parent
     data_dir = SCRIPT_DIR / args.csv_dir
@@ -953,7 +969,7 @@ def main():
 
     if not uni_csv.exists() or not prog_csv.exists():
         print(f"ERROR: Could not find CSVs in {data_dir}")
-        if args.validate_only or args.dry_run:
+        if args.validate_only or args.dry_run or args.apply:
             sys.exit(1)
         return
 
@@ -963,6 +979,10 @@ def main():
 
     if args.dry_run:
         asyncio.run(run_dry_run_comparison(SCRIPT_DIR, uni_csv, prog_csv))
+        return
+
+    if args.apply:
+        asyncio.run(run_apply_mode(SCRIPT_DIR, uni_csv, prog_csv))
         return
 
     # --- Live seed path (unchanged) ---
@@ -1058,6 +1078,765 @@ def main():
     print(f"Created: {created}")
     print(f"Skipped: {skipped}")
     print(f"Total in DB: {total}")
+
+
+# ---------------------------------------------------------------------------
+# --apply entry point and helpers
+# ---------------------------------------------------------------------------
+@dataclass
+class ApplyPlan:
+    inserted_unis: List[Dict[str, Any]] = field(default_factory=list)
+    updated_unis: List[Dict[str, Any]] = field(default_factory=list)
+    preserves: List[str] = field(default_factory=list)
+    blocking_conflicts: List[str] = field(default_factory=list)
+    uni_insert_count: int = 0
+    uni_update_count: int = 0
+    uni_unchanged_count: int = 0
+    prog_insert_count: int = 0
+    prog_update_count: int = 0
+    prog_unchanged_count: int = 0
+    blank_preserves_count: int = 0
+    malformed_unrelated_skipped: int = 0
+
+def merge_derived_array(existing_list, required_values):
+    result = list(existing_list) if existing_list else []
+    seen = set()
+    for v in result:
+        if v is not None:
+            n_v = normalize_identity_text(v)
+            if n_v: seen.add(n_v)
+    for rv in required_values:
+        if rv is not None:
+            n_rv = normalize_identity_text(rv)
+            if n_rv and n_rv not in seen:
+                result.append(rv)
+                seen.add(n_rv)
+    return result
+
+async def acquire_advisory_lock(client, db_name):
+    lock_coll = client[db_name]["_seed_operation_locks"]
+    token = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
+    expires = now + timedelta(minutes=10)
+    lock_doc = {
+        "_id": "university_seed_apply",
+        "token": token,
+        "acquired_at": now,
+        "expires_at": expires,
+        "safe_mode": "apply"
+    }
+    try:
+        await lock_coll.insert_one(lock_doc)
+        return token
+    except Exception:
+        existing = await lock_coll.find_one({"_id": "university_seed_apply"})
+        if existing:
+            exp = existing.get("expires_at")
+            if exp:
+                if exp.tzinfo is None:
+                    exp = exp.replace(tzinfo=timezone.utc)
+            else:
+                exp = now
+
+            if exp > now:
+                raise RuntimeError("Another university apply operation is active.")
+            else:
+                old_token = existing.get("token")
+                res = await lock_coll.update_one(
+                    {"_id": "university_seed_apply", "token": old_token, "expires_at": existing.get("expires_at")},
+                    {"$set": {"token": token, "acquired_at": now, "expires_at": expires}}
+                )
+                if res.modified_count == 0:
+                    raise RuntimeError("Failed to safely take over expired apply lock.")
+                return token
+        else:
+            raise RuntimeError("Failed to acquire apply lock due to unknown conflict.")
+
+async def release_advisory_lock(client, db_name, token):
+    if not token: return
+    try:
+        lock_coll = client[db_name]["_seed_operation_locks"]
+        await lock_coll.delete_one({"_id": "university_seed_apply", "token": token})
+    except Exception:
+        pass
+
+def verify_existing_university(plan_u, post_doc):
+    if post_doc["_id"] != plan_u["_id"]: return False, "_id"
+    if post_doc.get("university_name") != plan_u["original_university_name"]: return False, "university_name"
+    if post_doc.get("country") != plan_u["original_country"]: return False, "country"
+    if post_doc.get("created_at") != plan_u["old_created_at"]["val"]: return False, "created_at"
+    if post_doc.get("is_active") != plan_u["old_is_active"]["val"]: return False, "is_active"
+
+    for k, v in plan_u["new_top_level"].items():
+        if post_doc.get(k) != v: return False, f"top_level: {k}"
+
+    for k in plan_u["preserved_keys"]:
+        if post_doc.get(k) != plan_u["original_doc"].get(k): return False, f"preserved: {k}"
+
+    final_progs = plan_u["new_programs"] if plan_u["new_programs"] is not None else plan_u["old_programs"]["val"]
+    if post_doc.get("programs") != final_progs: return False, "programs"
+
+    prog_identities = set()
+    for p in post_doc.get("programs", []):
+        pn = normalize_identity_text(p.get("program_name"))
+        sl = normalize_identity_text(p.get("study_level"))
+        pf = normalize_identity_text(p.get("field"))
+        pid = f"{pn}|{sl}|{pf}"
+        if pid in prog_identities: return False, "duplicate program identity"
+        prog_identities.add(pid)
+
+    final_sl = plan_u["new_study_levels"] if plan_u["new_study_levels"] is not None else plan_u["old_study_levels"]["val"]
+    if post_doc.get("study_levels") != final_sl: return False, "study_levels"
+
+    final_fields = plan_u["new_fields"] if plan_u["new_fields"] is not None else plan_u["old_fields"]["val"]
+    if post_doc.get("fields") != final_fields: return False, "fields"
+
+    for k, v in plan_u["original_doc"].items():
+        if k not in plan_u["managed_top_level_keys"]:
+            if post_doc.get(k) != v: return False, f"unmanaged: {k}"
+
+    if plan_u["real_update"]:
+        if post_doc.get("updated_at") == plan_u["old_updated_at"]["val"]: return False, "updated_at unchanged"
+    else:
+        if post_doc.get("updated_at") != plan_u["old_updated_at"]["val"]: return False, "updated_at changed"
+
+    return True, ""
+
+def verify_new_university(plan_u, post_doc, docs_for_collision_check):
+    n_name = normalize_identity_text(plan_u["payload"]["university_name"])
+    n_country = normalize_identity_text(plan_u["payload"]["country"])
+
+    match_count = sum(1 for d in docs_for_collision_check if normalize_identity_text(d.get("university_name")) == n_name and normalize_identity_text(d.get("country")) == n_country)
+    if match_count != 1: return False, "collision match count"
+
+    if post_doc.get("university_name") != plan_u["payload"]["university_name"]: return False, "university_name"
+    if post_doc.get("country") != plan_u["payload"]["country"]: return False, "country"
+
+    for k, v in plan_u["payload"].items():
+        if k not in ["programs", "study_levels", "fields", "updated_at", "_id"]:
+            if post_doc.get(k) != v: return False, f"field mismatch: {k}"
+
+    if post_doc.get("programs") != plan_u["payload"]["programs"]: return False, "programs"
+
+    prog_identities = set()
+    for p in post_doc.get("programs", []):
+        pn = normalize_identity_text(p.get("program_name"))
+        sl = normalize_identity_text(p.get("study_level"))
+        pf = normalize_identity_text(p.get("field"))
+        pid = f"{pn}|{sl}|{pf}"
+        if pid in prog_identities: return False, "duplicate program identity"
+        prog_identities.add(pid)
+
+    if post_doc.get("study_levels") != plan_u["payload"]["study_levels"]: return False, "study_levels"
+    if post_doc.get("fields") != plan_u["payload"]["fields"]: return False, "fields"
+    if post_doc.get("is_active") is not True: return False, "is_active"
+    if not post_doc.get("created_at"): return False, "created_at missing"
+    if post_doc.get("updated_at") is not None: return False, "updated_at should be None"
+
+    return True, ""
+
+async def run_apply_mode(SCRIPT_DIR, uni_csv, prog_csv):
+    import os
+    from dotenv import load_dotenv
+    from motor.motor_asyncio import AsyncIOMotorClient
+
+    load_dotenv(SCRIPT_DIR.parent / ".env")
+
+    mongodb_url = os.getenv("MONGODB_URL")
+    database_name = os.getenv("DATABASE_NAME")
+
+    if not mongodb_url or not mongodb_url.strip():
+        print("ERROR: MongoDB configuration is missing for apply mode.")
+        sys.exit(1)
+    if not database_name or not database_name.strip():
+        print("ERROR: MongoDB configuration is missing for apply mode.")
+        sys.exit(1)
+
+    print("\n" + "="*40)
+    print("APPLY MODE SAFETY NOTICE")
+    print("="*40)
+    print("Executing explicitly verified --apply mode.")
+    print("This mode requires exclusive execution. External writers must be paused.")
+    print("No Beanie ODM models are used. Raw Motor updates enforce safety.")
+
+    res = parse_and_validate_csvs(SCRIPT_DIR, uni_csv, prog_csv)
+
+    print("\n" + "="*40)
+    print("INPUT VALIDATION SUMMARY")
+    print("="*40)
+    print(f"Universities CSV rows inspected: {res.uni_rows_inspected}")
+    print(f"Programs CSV rows inspected: {res.prog_rows_inspected}")
+    print(f"Blocking validation errors: {len(res.errors)}")
+    print(f"Validation warnings: {len(res.warnings)}")
+
+    if res.errors:
+        print("\nERROR: Blocking validation errors found. Please fix them before applying.")
+        sys.exit(1)
+
+    print("\nConnecting to MongoDB for read/write apply mode...")
+
+    client = None
+    lock_token = None
+    try:
+        client = AsyncIOMotorClient(
+            mongodb_url,
+            uuidRepresentation="standard",
+            serverSelectionTimeoutMS=5000
+        )
+        await client.admin.command("ping")
+        db = client[database_name]
+        coll = db["universities"]
+
+        db_unis = await coll.find({}).to_list(length=None)
+        db_uni_index = {}
+        malformed_skipped = 0
+        duplicate_identities = 0
+
+        target_names = {normalize(r.get("university_name", "")) for r in res.valid_unis}
+        target_countries = {normalize(r.get("country", "")) for r in res.valid_unis}
+
+        for doc in db_unis:
+            if not isinstance(doc, dict):
+                continue
+            name = doc.get("university_name")
+            country = doc.get("country")
+            n_name = normalize_identity_text(name)
+            n_country = normalize_identity_text(country)
+
+            if not n_name and not n_country:
+                malformed_skipped += 1
+                continue
+
+            if not n_name or not n_country:
+                if (n_name and n_name in target_names) or (n_country and n_country in target_countries):
+                    duplicate_identities += 1
+                else:
+                    malformed_skipped += 1
+                continue
+
+            ident = f"{n_name}|{n_country}"
+            if ident not in db_uni_index:
+                db_uni_index[ident] = []
+            db_uni_index[ident].append(doc)
+
+        print("\n" + "="*40)
+        print("DATABASE READ SUMMARY")
+        print("="*40)
+        print(f"University documents read: {len(db_unis)}")
+        print(f"Malformed unrelated skipped: {malformed_skipped}")
+
+        plan = ApplyPlan()
+        plan.malformed_unrelated_skipped = malformed_skipped
+
+        for docs in db_uni_index.values():
+            if len(docs) > 1:
+                duplicate_identities += 1
+
+        if duplicate_identities > 0:
+            plan.blocking_conflicts.append(f"Duplicate/malformed target university DB identities found: {duplicate_identities}")
+
+        progs_by_uni = {}
+        for r in res.valid_progs:
+            n_uni = normalize(r.get("university_name", ""))
+            if n_uni not in progs_by_uni:
+                progs_by_uni[n_uni] = []
+            progs_by_uni[n_uni].append(r)
+
+        fields_to_check = [
+            ("city",               False, False, True,  None),
+            ("continent",          False, False, True,  None),
+            ("qs_ranking",         False, False, False, strict_int_parser),
+            ("acceptance_rate",    False, False, False, finite_float_parser),
+            ("yearly_tuition_usd", False, False, False, strict_int_parser),
+            ("website",            True,  False, False, None),
+            ("admissions_url",     True,  False, False, None),
+            ("admissions_email",   False, True,  False, None),
+            ("description",        False, False, True,  None),
+        ]
+
+        prog_fields_to_check = [
+            ("duration_months", False, False, False, strict_int_parser),
+            ("tuition_fee_usd", False, False, False, strict_int_parser),
+            ("min_cgpa",        False, False, False, finite_float_parser),
+            ("min_ielts",       False, False, False, finite_float_parser),
+            ("min_gre",         False, False, False, strict_int_parser),
+            ("course_page_url", True,  False, False, None),
+            ("deadline",        False, False, True,  None),
+        ]
+
+        managed_top_level_keys = {"_id", "university_name", "country", "created_at", "updated_at", "is_active", "programs", "study_levels", "fields"}
+        for f, _, _, _, _ in fields_to_check:
+            managed_top_level_keys.add(f)
+
+        for row in res.valid_unis:
+            name = row.get("university_name", "")
+            country = row.get("country", "")
+            n_name = normalize(name)
+            n_country = normalize(country)
+            ident = f"{n_name}|{n_country}"
+
+            countries_for_name = res.uni_name_country_map.get(n_name, set())
+            if len(countries_for_name) > 1:
+                plan.blocking_conflicts.append(f"Ambiguous target parent mapping for: {name}")
+                continue
+
+            csv_progs = progs_by_uni.get(n_name, [])
+
+            docs = db_uni_index.get(ident, [])
+            if len(docs) == 0:
+                new_doc = {
+                    "university_name": name,
+                    "country": country,
+                    "is_active": True,
+                    "created_at": get_bson_compatible_utc_now(),
+                    "updated_at": None,
+                    "programs": [],
+                    "study_levels": [],
+                    "fields": []
+                }
+                for f, _, _, _, parser in fields_to_check:
+                    val = row.get(f, "")
+                    if val.strip():
+                        new_doc[f] = parser(val.strip()) if parser else val.strip()
+
+                required_study_levels = []
+                required_fields = []
+
+                sorted_csv_progs = list(csv_progs)
+                sorted_csv_progs.sort(key=lambda x: (
+                    normalize_identity_text(x.get("program_name", "")),
+                    normalize_identity_text(x.get("study_level", "")),
+                    normalize_identity_text(x.get("field", ""))
+                ))
+
+                for cp in sorted_csv_progs:
+                    p_doc = {
+                        "program_name": cp.get("program_name", "").strip(),
+                        "study_level": cp.get("study_level", "").strip(),
+                        "field": cp.get("field", "").strip(),
+                    }
+                    for pf, _, _, _, pparser in prog_fields_to_check:
+                        pval = cp.get(pf, "")
+                        if pval.strip():
+                            p_doc[pf] = pparser(pval.strip()) if pparser else pval.strip()
+
+                    new_doc["programs"].append(p_doc)
+                    required_study_levels.append(p_doc["study_level"])
+                    required_fields.append(p_doc["field"])
+
+                new_doc["study_levels"] = merge_derived_array([], required_study_levels)
+                new_doc["fields"] = merge_derived_array([], required_fields)
+
+                plan.inserted_unis.append({
+                    "identity": ident,
+                    "payload": new_doc,
+                    "prog_count": len(new_doc["programs"]),
+                    "display": f"{name} ({country})"
+                })
+                plan.uni_insert_count += 1
+                plan.prog_insert_count += len(new_doc["programs"])
+
+            elif len(docs) == 1:
+                doc = docs[0]
+                diffs = {}
+                old_top = {}
+                preserved_keys = []
+
+                for f, is_url, is_email, is_text, parser in fields_to_check:
+                    c_val = row.get(f, "")
+                    d_val = doc.get(f)
+                    old_top[f] = {"val": d_val, "exists": f in doc}
+                    is_diff, db_disp, csv_disp, is_preserve = compare_field(
+                        f, d_val, c_val, parser, is_url, is_email, is_text
+                    )
+                    if is_diff:
+                        diffs[f] = parser(c_val.strip()) if parser else c_val.strip()
+                    if is_preserve:
+                        plan.blank_preserves_count += 1
+                        plan.preserves.append(f"DB Value Preserved: {name} - {f}: {db_disp}")
+                        preserved_keys.append(f)
+
+                old_programs_raw = doc.get("programs")
+                if not isinstance(old_programs_raw, list):
+                    plan.blocking_conflicts.append(f"Target DB university '{name}' has non-list programs. Blocking.")
+                    continue
+
+                new_programs = []
+                prog_matched = set()
+                progs_changed = False
+
+                for p_raw in old_programs_raw:
+                    if not isinstance(p_raw, dict):
+                        plan.blocking_conflicts.append(f"Target DB university '{name}' has malformed program. Blocking.")
+                        continue
+
+                    p_copy = p_raw.copy()
+                    new_programs.append(p_copy)
+
+                    pn = normalize_identity_text(p_copy.get("program_name"))
+                    sl = normalize_identity_text(p_copy.get("study_level"))
+                    pf = normalize_identity_text(p_copy.get("field"))
+
+                    if not pn or not sl or not pf:
+                        plan.blocking_conflicts.append(f"Target DB university '{name}' has program without identity. Blocking.")
+                        continue
+
+                    ident_p = f"{pn}|{sl}|{pf}"
+                    if ident_p in prog_matched:
+                        plan.blocking_conflicts.append(f"Target DB university '{name}' has duplicate program identity. Blocking.")
+                        continue
+                    prog_matched.add(ident_p)
+
+                if plan.blocking_conflicts:
+                    continue
+
+                required_study_levels = []
+                required_fields = []
+
+                uni_prog_inserts = 0
+                uni_prog_updates = 0
+                uni_prog_unchanged = 0
+
+                new_csv_progs = []
+                for cp in csv_progs:
+                    cpn = normalize(cp.get("program_name", ""))
+                    csl = normalize(cp.get("study_level", ""))
+                    cpf = normalize(cp.get("field", ""))
+                    c_ident_p = f"{cpn}|{csl}|{cpf}"
+
+                    required_study_levels.append(cp.get("study_level", "").strip())
+                    required_fields.append(cp.get("field", "").strip())
+
+                    found_idx = -1
+                    for idx, p_item in enumerate(new_programs):
+                        pn = normalize_identity_text(p_item.get("program_name"))
+                        sl = normalize_identity_text(p_item.get("study_level"))
+                        pf = normalize_identity_text(p_item.get("field"))
+                        if f"{pn}|{sl}|{pf}" == c_ident_p:
+                            found_idx = idx
+                            break
+
+                    if found_idx == -1:
+                        new_csv_progs.append(cp)
+                    else:
+                        p_item = new_programs[found_idx]
+                        p_changed = False
+                        for pf_check, is_url, is_email, is_text, pparser in prog_fields_to_check:
+                            pval = cp.get(pf_check, "")
+                            dval = p_item.get(pf_check)
+                            is_diff, db_disp, csv_disp, is_preserve = compare_field(
+                                pf_check, dval, pval, pparser, is_url, is_email, is_text
+                            )
+                            if is_diff:
+                                p_item[pf_check] = pparser(pval.strip()) if pparser else pval.strip()
+                                p_changed = True
+                            if is_preserve:
+                                plan.blank_preserves_count += 1
+                                plan.preserves.append(f"DB Value Preserved: {name} - {cpn} - {pf_check}: {db_disp}")
+                                # Cannot robustly preserve embedded preserved keys without a complex map, but we'll check top-level later.
+                        if p_changed:
+                            progs_changed = True
+                            uni_prog_updates += 1
+                        else:
+                            uni_prog_unchanged += 1
+
+                if new_csv_progs:
+                    new_csv_progs.sort(key=lambda x: (
+                        normalize_identity_text(x.get("program_name", "")),
+                        normalize_identity_text(x.get("study_level", "")),
+                        normalize_identity_text(x.get("field", ""))
+                    ))
+                    for cp in new_csv_progs:
+                        p_doc = {
+                            "program_name": cp.get("program_name", "").strip(),
+                            "study_level": cp.get("study_level", "").strip(),
+                            "field": cp.get("field", "").strip(),
+                        }
+                        for pf_check, is_url, is_email, is_text, pparser in prog_fields_to_check:
+                            pval = cp.get(pf_check, "")
+                            if pval.strip():
+                                p_doc[pf_check] = pparser(pval.strip()) if pparser else pval.strip()
+                        new_programs.append(p_doc)
+                        progs_changed = True
+                        uni_prog_inserts += 1
+
+                plan.prog_insert_count += uni_prog_inserts
+                plan.prog_update_count += uni_prog_updates
+                plan.prog_unchanged_count += uni_prog_unchanged
+
+                old_study_levels = doc.get("study_levels", [])
+                old_fields = doc.get("fields", [])
+                if not isinstance(old_study_levels, list): old_study_levels = []
+                if not isinstance(old_fields, list): old_fields = []
+
+                new_study_levels = merge_derived_array(old_study_levels, required_study_levels)
+                new_fields = merge_derived_array(old_fields, required_fields)
+
+                study_levels_changed = (new_study_levels != old_study_levels)
+                fields_changed = (new_fields != old_fields)
+
+                real_update = bool(diffs or progs_changed or study_levels_changed or fields_changed)
+
+                if real_update:
+                    plan.updated_unis.append({
+                        "_id": doc["_id"],
+                        "identity": ident,
+                        "display": f"{name} ({country})",
+                        "original_doc": doc,
+                        "original_university_name": doc.get("university_name"),
+                        "original_country": doc.get("country"),
+                        "old_top_level": old_top,
+                        "new_top_level": diffs,
+                        "preserved_keys": preserved_keys,
+                        "managed_top_level_keys": managed_top_level_keys,
+                        "old_programs": {"val": old_programs_raw, "exists": "programs" in doc},
+                        "new_programs": new_programs if progs_changed else None,
+                        "old_study_levels": {"val": doc.get("study_levels"), "exists": "study_levels" in doc},
+                        "new_study_levels": new_study_levels if study_levels_changed else None,
+                        "old_fields": {"val": doc.get("fields"), "exists": "fields" in doc},
+                        "new_fields": new_fields if fields_changed else None,
+                        "old_created_at": {"val": doc.get("created_at"), "exists": "created_at" in doc},
+                        "old_is_active": {"val": doc.get("is_active"), "exists": "is_active" in doc},
+                        "old_updated_at": {"val": doc.get("updated_at"), "exists": "updated_at" in doc},
+                        "real_update": real_update
+                    })
+                    plan.uni_update_count += 1
+                else:
+                    plan.uni_unchanged_count += 1
+
+        print("\n" + "="*40)
+        print("APPLY PLAN SUMMARY")
+        print("="*40)
+        print(f"Universities to Insert: {plan.uni_insert_count}")
+        print(f"Universities to Update: {plan.uni_update_count}")
+        print(f"Universities Unchanged: {plan.uni_unchanged_count}")
+        print(f"Programs to Insert: {plan.prog_insert_count}")
+        print(f"Programs to Update: {plan.prog_update_count}")
+        print(f"Programs Unchanged: {plan.prog_unchanged_count}")
+        print(f"Preserved Blank Fields: {plan.blank_preserves_count}")
+        print(f"Blocking Conflicts: {len(plan.blocking_conflicts)}")
+
+        if plan.blocking_conflicts:
+            print("\n" + "="*40)
+            print("BLOCKING CONFLICTS")
+            print("="*40)
+            for b in plan.blocking_conflicts:
+                print(f" - {b}")
+            print("\nERROR: Blocking conflicts detected. Plan aborted safely.")
+            sys.exit(1)
+
+        print("\n" + "="*40)
+        print("PLANNED UNIVERSITY INSERTS")
+        print("="*40)
+        for u in plan.inserted_unis:
+            print(f" + {u['display']} ({u['prog_count']} programs)")
+        if not plan.inserted_unis: print("None")
+
+        print("\n" + "="*40)
+        print("PLANNED UNIVERSITY UPDATES")
+        print("="*40)
+        for u in plan.updated_unis:
+            print(f" * {u['display']}")
+            for k,v in u["new_top_level"].items(): print(f"   - set {k}")
+            if u["new_programs"] is not None: print(f"   - modified/appended programs array")
+            if u["new_study_levels"] is not None: print(f"   - updated study_levels")
+            if u["new_fields"] is not None: print(f"   - updated fields")
+        if not plan.updated_unis: print("None")
+
+        if plan.preserves:
+            print("\n" + "="*40)
+            print("DB VALUES PRESERVED BECAUSE CSV IS BLANK")
+            print("="*40)
+            for p in plan.preserves[:50]: print(f" {p}")
+            if len(plan.preserves) > 50: print(f" ... and {len(plan.preserves)-50} more")
+
+        print("\nAcquiring Advisory Lock...")
+        try:
+            lock_token = await acquire_advisory_lock(client, database_name)
+            print("Lock acquired safely.")
+        except RuntimeError as e:
+            print(f"ERROR: {e}")
+            sys.exit(1)
+
+        print("\n" + "="*40)
+        print("WRITE EXECUTION SUMMARY")
+        print("="*40)
+
+        exec_inserted = 0
+        exec_updated = 0
+        exec_verified_unchanged = 0
+        exec_concurrency_conflict = 0
+        exec_write_failed = 0
+        exec_verification_failed = 0
+        exec_not_attempted = len(plan.inserted_unis) + len(plan.updated_unis)
+
+        plan.inserted_unis.sort(key=lambda x: x["identity"])
+        plan.updated_unis.sort(key=lambda x: x["identity"])
+
+        def apply_guard(filter_doc, and_clauses, f_name, info):
+            if not info["exists"]:
+                filter_doc[f_name] = {"$exists": False}
+            elif info["val"] is None:
+                and_clauses.append({f_name: None})
+                and_clauses.append({f_name: {"$exists": True}})
+            else:
+                filter_doc[f_name] = info["val"]
+
+        for u in plan.updated_unis:
+            filter_doc = {
+                "_id": u["_id"],
+                "university_name": u["original_university_name"],
+                "country": u["original_country"]
+            }
+            and_clauses = []
+
+            for k, info in u["old_top_level"].items():
+                apply_guard(filter_doc, and_clauses, k, info)
+
+            apply_guard(filter_doc, and_clauses, "created_at", u["old_created_at"])
+            apply_guard(filter_doc, and_clauses, "is_active", u["old_is_active"])
+            apply_guard(filter_doc, and_clauses, "updated_at", u["old_updated_at"])
+
+            if u["new_programs"] is not None:
+                apply_guard(filter_doc, and_clauses, "programs", u["old_programs"])
+            if u["new_study_levels"] is not None:
+                apply_guard(filter_doc, and_clauses, "study_levels", u["old_study_levels"])
+            if u["new_fields"] is not None:
+                apply_guard(filter_doc, and_clauses, "fields", u["old_fields"])
+
+            if and_clauses:
+                filter_doc["$and"] = and_clauses
+
+            update_doc = {"$set": u["new_top_level"].copy()}
+            if u["new_programs"] is not None:
+                update_doc["$set"]["programs"] = u["new_programs"]
+            if u["new_study_levels"] is not None:
+                update_doc["$set"]["study_levels"] = u["new_study_levels"]
+            if u["new_fields"] is not None:
+                update_doc["$set"]["fields"] = u["new_fields"]
+
+            if u["real_update"]:
+                update_doc["$set"]["updated_at"] = get_bson_compatible_utc_now()
+
+            try:
+                res_u = await coll.update_one(filter_doc, update_doc)
+                if res_u.matched_count == 0:
+                    exec_concurrency_conflict += 1
+                    print(f" [CONFLICT] {u['display']} was modified concurrently.")
+                    break
+                elif res_u.modified_count == 0:
+                    post_doc = await coll.find_one({"_id": u["_id"]})
+                    if post_doc:
+                        v_ok, v_reason = verify_existing_university(u, post_doc)
+                    else:
+                        v_ok, v_reason = False, "doc missing"
+                    if v_ok:
+                        exec_verified_unchanged += 1
+                        print(f" [UNCHANGED] {u['display']} matched target state.")
+                        exec_not_attempted -= 1
+                    else:
+                        exec_verification_failed += 1
+                        print(f" [VERIFY FAIL] {u['display']} differs from target state (reason: {v_reason}).")
+                        break
+                else:
+                    exec_updated += 1
+                    exec_not_attempted -= 1
+                    print(f" [UPDATED] {u['display']}")
+            except Exception:
+                exec_write_failed += 1
+                print(f" [WRITE ERROR] {u['display']}")
+                break
+
+        if exec_concurrency_conflict == 0 and exec_write_failed == 0 and exec_verification_failed == 0:
+            for u in plan.inserted_unis:
+                parts = u["identity"].split("|")
+                n_name, n_country = parts[0], parts[1]
+
+                collision = False
+                docs = await coll.find({}).to_list(length=None)
+                for d in docs:
+                    if not isinstance(d, dict): continue
+                    if normalize_identity_text(d.get("university_name")) == n_name and normalize_identity_text(d.get("country")) == n_country:
+                        collision = True
+                        break
+
+                if collision:
+                    exec_concurrency_conflict += 1
+                    print(f" [CONFLICT] {u['display']} already exists now.")
+                    break
+
+                try:
+                    res_i = await coll.insert_one(u["payload"])
+                    u["_id"] = res_i.inserted_id
+                    exec_inserted += 1
+                    exec_not_attempted -= 1
+                    print(f" [INSERTED] {u['display']}")
+                except Exception:
+                    exec_write_failed += 1
+                    print(f" [WRITE ERROR] {u['display']}")
+                    break
+
+        print("\n" + "="*40)
+        print("POST-APPLY VERIFICATION")
+        print("="*40)
+        verify_ok = True
+
+        for u in plan.updated_unis[:exec_updated]:
+            post_doc = await coll.find_one({"_id": u["_id"]})
+            ok, reason = (False, "doc missing") if not post_doc else verify_existing_university(u, post_doc)
+            if not ok:
+                verify_ok = False
+                print(f" FAIL: {u['display']} failed comprehensive update verification (reason: {reason}).")
+                break
+
+        if verify_ok:
+            docs_for_collision_check = await coll.find({}).to_list(length=None)
+            for u in plan.inserted_unis[:exec_inserted]:
+                post_doc = await coll.find_one({"_id": u["_id"]})
+                ok, reason = (False, "doc missing") if not post_doc else verify_new_university(u, post_doc, docs_for_collision_check)
+                if not ok:
+                    verify_ok = False
+                    print(f" FAIL: {u['display']} failed comprehensive insert verification (reason: {reason}).")
+                    break
+
+        if verify_ok:
+            total_after = await coll.count_documents({})
+            if total_after != len(db_unis) + exec_inserted:
+                verify_ok = False
+                print(" FAIL: Global document count delta is incorrect.")
+
+        if verify_ok:
+            print(" All successful writes verified correctly in DB.")
+        else:
+            print(" VERIFICATION ERROR DETECTED.")
+            exec_verification_failed += 1
+
+        print("\n" + "="*40)
+        print("FINAL APPLY RESULT")
+        print("="*40)
+        print(f"Inserted: {exec_inserted}")
+        print(f"Updated: {exec_updated}")
+        print(f"Verified Unchanged: {exec_verified_unchanged}")
+        print(f"Concurrency Conflicted: {exec_concurrency_conflict}")
+        print(f"Write Failed: {exec_write_failed}")
+        print(f"Verification Failed: {exec_verification_failed}")
+        print(f"Not Attempted: {exec_not_attempted}")
+
+        if exec_concurrency_conflict > 0 or exec_write_failed > 0 or exec_verification_failed > 0:
+            print("\nERROR: Partial failure occurred. Remaining operations safely skipped.")
+            sys.exit(1)
+        else:
+            print("\nSUCCESS: Apply completed cleanly.")
+            sys.exit(0)
+
+    except Exception:
+        print("\nERROR: Database operation failed safely.")
+        sys.exit(1)
+    finally:
+        if client is not None and lock_token is not None:
+            await release_advisory_lock(client, database_name, lock_token)
+        if client is not None:
+            client.close()
 
 if __name__ == "__main__":
     main()
