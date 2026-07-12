@@ -470,10 +470,83 @@ def parse_and_validate_csvs(SCRIPT_DIR, uni_csv, prog_csv) -> ValidationResult:
 
     return res
 
+def apply_selection_filter(res, country, limit):
+    filter_country_norm = normalize(country) if country else None
+
+    matched_unis = []
+    for row in res.valid_unis:
+        row_country = row.get("country", "")
+        row_country_norm = normalize(row_country)
+        if filter_country_norm and row_country_norm != filter_country_norm:
+            continue
+        matched_unis.append(row)
+
+    if filter_country_norm and len(matched_unis) == 0:
+        print(f"\nERROR: Country filter '{country}' matched 0 universities.")
+        sys.exit(1)
+
+    matched_unis_count_before_limit = len(matched_unis)
+
+    matched_unis.sort(key=lambda x: (
+        normalize(x.get("country", "")),
+        normalize(x.get("university_name", ""))
+    ))
+
+    if limit is not None and limit < len(matched_unis):
+        selected_unis = matched_unis[:limit]
+    else:
+        selected_unis = matched_unis
+
+    selected_uni_identities = set()
+    for row in selected_unis:
+        n_uni = normalize(row.get("university_name", ""))
+        n_country = normalize(row.get("country", ""))
+        selected_uni_identities.add(f"{n_uni}|{n_country}")
+
+    selected_progs = []
+    for row in res.valid_progs:
+        prog_uni_raw = row.get("university_name", "")
+        n_uni = normalize(prog_uni_raw)
+
+        countries_for_name = res.uni_name_country_map.get(n_uni, set())
+
+        if not countries_for_name:
+            print(f"\nERROR: Program mapped to university '{prog_uni_raw}' which has no country mapping.")
+            sys.exit(1)
+
+        if len(countries_for_name) > 1:
+            print(f"\nERROR: Program mapped to university '{prog_uni_raw}' which has ambiguous country mappings: {', '.join(countries_for_name)}.")
+            sys.exit(1)
+
+        n_country = list(countries_for_name)[0]
+        exact_identity = f"{n_uni}|{n_country}"
+
+        if exact_identity in selected_uni_identities:
+            selected_progs.append(row)
+
+    res.valid_unis = selected_unis
+    res.valid_progs = selected_progs
+
+    print("\n" + "="*40)
+    print("SELECTION SUMMARY")
+    print("="*40)
+    print(f"Country filter: {country if country else 'All'}")
+    print(f"University limit: {limit if limit is not None else 'None'}")
+    print(f"Universities matched before limit: {matched_unis_count_before_limit}")
+    print(f"Universities selected: {len(selected_unis)}")
+    print(f"Programs selected: {len(selected_progs)}")
+
+    if selected_unis:
+        print("\nSelected universities:")
+        for u in selected_unis:
+            print(f" - {u.get('university_name')} ({u.get('country')})")
+
+    return res
+
 # ---------------------------------------------------------------------------
 # --validate-only entry point (Phase 5A-1 behavior preserved exactly)
 # ---------------------------------------------------------------------------
-def run_validation(SCRIPT_DIR, uni_csv, prog_csv):
+def run_validation(SCRIPT_DIR, uni_csv, prog_csv, country=None, limit=None):
     res = parse_and_validate_csvs(SCRIPT_DIR, uni_csv, prog_csv)
 
     if res.errors:
@@ -501,7 +574,9 @@ def run_validation(SCRIPT_DIR, uni_csv, prog_csv):
         sys.exit(1)
     else:
         print("Final result: PASSED")
-        sys.exit(0)
+
+    res = apply_selection_filter(res, country, limit)
+    sys.exit(0)
 
 # ---------------------------------------------------------------------------
 # Field comparison helper for dry-run
@@ -599,7 +674,7 @@ def compare_field(field_name, db_val, csv_str, parser=None, is_url=False,
 # ---------------------------------------------------------------------------
 # --dry-run entry point: direct Motor read-only comparison
 # ---------------------------------------------------------------------------
-async def run_dry_run_comparison(SCRIPT_DIR, uni_csv, prog_csv):
+async def run_dry_run_comparison(SCRIPT_DIR, uni_csv, prog_csv, country=None, limit=None):
     import os
     from dotenv import load_dotenv
     from motor.motor_asyncio import AsyncIOMotorClient
@@ -638,6 +713,8 @@ async def run_dry_run_comparison(SCRIPT_DIR, uni_csv, prog_csv):
         print("\nERROR: Blocking validation errors found. "
               "Please run --validate-only to see full details.")
         sys.exit(1)
+
+    res = apply_selection_filter(res, country, limit)
 
     print("\nConnecting to MongoDB for read-only comparison...")
 
@@ -942,6 +1019,15 @@ async def run_dry_run_comparison(SCRIPT_DIR, uni_csv, prog_csv):
 # ---------------------------------------------------------------------------
 # main()
 # ---------------------------------------------------------------------------
+def positive_int(value):
+    try:
+        ivalue = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value} is an invalid positive int value")
+    if ivalue <= 0:
+        raise argparse.ArgumentTypeError(f"{value} is an invalid positive int value")
+    return ivalue
+
 def main():
     parser = argparse.ArgumentParser(description="Seed universities from CSV")
     group = parser.add_mutually_exclusive_group()
@@ -955,6 +1041,10 @@ def main():
                         help="Must be used with --apply to execute changes")
     parser.add_argument("--csv-dir", type=str, default="data",
                         help="Directory containing CSV files")
+    parser.add_argument("--country", type=str,
+                        help="Process only universities whose country exactly matches this value, case-insensitively.")
+    parser.add_argument("--limit", type=positive_int,
+                        help="Process at most this many universities after applying --country. The same input always selects the same deterministic subset.")
     args = parser.parse_args()
 
     if args.confirm_apply and not args.apply:
@@ -974,15 +1064,15 @@ def main():
         return
 
     if args.validate_only:
-        run_validation(SCRIPT_DIR, uni_csv, prog_csv)
+        run_validation(SCRIPT_DIR, uni_csv, prog_csv, args.country, args.limit)
         return
 
     if args.dry_run:
-        asyncio.run(run_dry_run_comparison(SCRIPT_DIR, uni_csv, prog_csv))
+        asyncio.run(run_dry_run_comparison(SCRIPT_DIR, uni_csv, prog_csv, args.country, args.limit))
         return
 
     if args.apply:
-        asyncio.run(run_apply_mode(SCRIPT_DIR, uni_csv, prog_csv))
+        asyncio.run(run_apply_mode(SCRIPT_DIR, uni_csv, prog_csv, args.country, args.limit))
         return
 
     # --- Live seed path (unchanged) ---
@@ -1235,7 +1325,7 @@ def verify_new_university(plan_u, post_doc, docs_for_collision_check):
 
     return True, ""
 
-async def run_apply_mode(SCRIPT_DIR, uni_csv, prog_csv):
+async def run_apply_mode(SCRIPT_DIR, uni_csv, prog_csv, country=None, limit=None):
     import os
     from dotenv import load_dotenv
     from motor.motor_asyncio import AsyncIOMotorClient
@@ -1272,6 +1362,8 @@ async def run_apply_mode(SCRIPT_DIR, uni_csv, prog_csv):
     if res.errors:
         print("\nERROR: Blocking validation errors found. Please fix them before applying.")
         sys.exit(1)
+
+    res = apply_selection_filter(res, country, limit)
 
     print("\nConnecting to MongoDB for read/write apply mode...")
 
