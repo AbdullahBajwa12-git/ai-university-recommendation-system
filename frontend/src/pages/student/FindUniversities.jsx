@@ -83,10 +83,11 @@ const FindUniversities = () => {
         isDeletingHistory,
     } = useRecommendations();
 
-    const { localHistory, saveToHistory, removeFromHistory, clearHistory } = useSearchHistory();
+    const { localHistory, saveToHistory, clearHistory } = useSearchHistory();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [activeResults, setActiveResults] = useState(null);
+    const [activeHistorySessionId, setActiveHistorySessionId] = useState(null);
     const [comparingItems, setComparingItems] = useState([]);
     const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
     const [viewMode, setViewMode] = useState('new'); // 'new', 'history', 'saved'
@@ -95,7 +96,7 @@ const FindUniversities = () => {
     const [loadingHistoryItem, setLoadingHistoryItem] = useState(null); // session_id being loaded
     const [historyTab, setHistoryTab] = useState('local'); // 'local' | 'remote'
     const [sessionToDelete, setSessionToDelete] = useState(null);
-    const [isDeletingSession, setIsDeletingSession] = useState(false);
+    const [deletingSessionId, setDeletingSessionId] = useState(null);
     const dialogRef = useRef(null);
 
     useEffect(() => {
@@ -103,29 +104,30 @@ const FindUniversities = () => {
             dialogRef.current?.focus();
 
             const handleKeyDown = (e) => {
-                if (e.key === 'Escape' && !isDeletingSession && !isDeletingHistory) {
+                if (e.key === 'Escape' && !deletingSessionId && !isDeletingHistory) {
                     setSessionToDelete(null);
                 }
             };
             document.addEventListener('keydown', handleKeyDown);
             return () => document.removeEventListener('keydown', handleKeyDown);
         }
-    }, [sessionToDelete, isDeletingSession, isDeletingHistory]);
+    }, [sessionToDelete, deletingSessionId, isDeletingHistory]);
 
     const handleDeleteConfirm = async () => {
         if (!sessionToDelete) return;
-        setIsDeletingSession(true);
+        setDeletingSessionId(sessionToDelete.session_id);
         try {
             await deleteHistory(sessionToDelete.session_id);
-            if (activeResults?.session_id === sessionToDelete.session_id) {
+            if (activeHistorySessionId === sessionToDelete.session_id) {
                 setActiveResults(null);
+                setActiveHistorySessionId(null);
                 setViewMode('new');
             }
             setSessionToDelete(null);
         } catch {
             // Toast handles the error via useRecommendations hook
         } finally {
-            setIsDeletingSession(false);
+            setDeletingSessionId(null);
         }
     };
 
@@ -154,6 +156,7 @@ const FindUniversities = () => {
                 // ✅ Persist the inputs to localStorage history
                 saveToHistory(data);
                 setActiveResults(results);
+                setActiveHistorySessionId(null);
                 setViewMode('new');
                 setIsModalOpen(false);
                 setPrefillData(null);
@@ -164,31 +167,68 @@ const FindUniversities = () => {
         }
     };
 
-    // Open the modal pre-filled with a local history item
-    const handleLocalHistoryClick = (entry) => {
-        const profile = { ...entry.data };
-        if (!Array.isArray(profile.continents)) profile.continents = [];
-        if (!Array.isArray(profile.countries)) profile.countries = [];
-        setPrefillData(profile);
-        setPrefillSource('history');
-        setIsModalOpen(true);
-    };
 
-    // Click a remote (API) history item → fetch full session → pre-fill the modal form
-    const handleHistoryClick = async (session) => {
+
+    // Directly view stored history results without generating new ones
+    const handleViewResults = async (session) => {
         setLoadingHistoryItem(session.session_id);
         try {
             const details = await getSessionDetails(session.session_id);
-            const profile = details.student_profile || {};
-            if (!Array.isArray(profile.continents)) profile.continents = [];
-            if (!Array.isArray(profile.countries)) profile.countries = [];
-            setPrefillData(profile);
-            setPrefillSource('history');
             setActiveResults(details);
-            setViewMode('new');
+            setActiveHistorySessionId(session.session_id);
+            setViewMode('history');
+            setIsModalOpen(false);
+        } catch (error) {
+            console.error(error);
+            import('react-hot-toast').then(({ toast }) => toast.error('Failed to load search history results'));
+        } finally {
+            setLoadingHistoryItem(null);
+        }
+    };
+
+    // Open wizard with previous inputs to allow the student to modify and regenerate
+    const handleUseInputsAgain = async (e, session) => {
+        e.stopPropagation();
+        setLoadingHistoryItem(session.session_id);
+        try {
+            const details = await getSessionDetails(session.session_id);
+            const historicalProfile = details.student_profile || {};
+
+            // Explicitly map keys without using fallbacks, loops, or array spreads
+            const explicitData = {
+                full_name: historicalProfile.full_name || '',
+                email: historicalProfile.email || '',
+                country: historicalProfile.country || '',
+                current_degree_level: historicalProfile.current_degree_level || '',
+                current_university: historicalProfile.current_university || '',
+                cgpa: historicalProfile.cgpa || '',
+                graduation_year: historicalProfile.graduation_year || '',
+                degree_applying_for: historicalProfile.degree_applying_for || '',
+                intended_major: historicalProfile.intended_major || '',
+                ielts: historicalProfile.ielts || '',
+                toefl: historicalProfile.toefl || '',
+                gre: historicalProfile.gre || '',
+                gmat: historicalProfile.gmat || '',
+                sat: historicalProfile.sat || '',
+                need_scholarship: Boolean(historicalProfile.need_scholarship),
+                fully_funded_required: Boolean(historicalProfile.fully_funded_required),
+                partial_scholarship_accepted: historicalProfile.partial_scholarship_accepted !== false,
+                budget_max: historicalProfile.budget_max || '',
+                continents: Array.isArray(historicalProfile.continents) ? historicalProfile.continents : [],
+                countries: Array.isArray(historicalProfile.countries) ? historicalProfile.countries : [],
+                public_only: Boolean(historicalProfile.public_only),
+                private_allowed: historicalProfile.private_allowed !== false,
+                research_focused: Boolean(historicalProfile.research_focused),
+                industry_focused: Boolean(historicalProfile.industry_focused),
+                top_ranked_only: Boolean(historicalProfile.top_ranked_only)
+            };
+
+            setPrefillData(explicitData);
+            setPrefillSource('history');
             setIsModalOpen(true);
-        } catch (e) {
-            import('react-hot-toast').then(({ toast }) => toast.error('Failed to load search history'));
+        } catch (error) {
+            console.error(error);
+            import('react-hot-toast').then(({ toast }) => toast.error('Failed to load search history inputs'));
         } finally {
             setLoadingHistoryItem(null);
         }
@@ -247,21 +287,90 @@ const FindUniversities = () => {
     };
 
     const displayUniversities = () => {
-        if (viewMode === 'new' && activeResults) return activeResults.recommended_universities || [];
+        if ((viewMode === 'new' || viewMode === 'history') && activeResults) return activeResults.recommended_universities || [];
         if (viewMode === 'saved') return saved || [];
         return [];
     };
 
-    // Format a timestamp as a relative string
-    const formatRelativeTime = (iso) => {
-        const diff = Date.now() - new Date(iso).getTime();
-        const mins = Math.floor(diff / 60000);
-        const hrs = Math.floor(diff / 3600000);
-        const days = Math.floor(diff / 86400000);
-        if (mins < 2) return 'Just now';
-        if (mins < 60) return `${mins}m ago`;
-        if (hrs < 24) return `${hrs}h ago`;
-        return `${days}d ago`;
+
+
+    const safeHistory = Array.isArray(history) ? history : [];
+    const sortedHistory = [...safeHistory].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    const recentHistory = sortedHistory.slice(0, 5);
+
+    const renderHistoryList = (list) => {
+        if (isLoadingHistory) {
+            return (
+                <div className="space-y-3">
+                    {[1, 2, 3].map(i => <div key={i} className="h-12 bg-gray-100 dark:bg-gray-700 animate-pulse rounded-xl" />)}
+                </div>
+            );
+        }
+        if (!list || list.length === 0) {
+            return (
+                <div className="text-center py-6">
+                    <div className="h-10 w-10 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Search className="h-5 w-5 text-gray-300" />
+                    </div>
+                    <p className="text-xs text-gray-500 italic">No previous searches yet.</p>
+                </div>
+            );
+        }
+        return (
+            <div className="space-y-2">
+                {list.map(session => (
+                    <article
+                        key={session.session_id}
+                        className="group relative flex flex-col gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all"
+                    >
+                        {loadingHistoryItem === session.session_id && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-white/70 dark:bg-gray-800/70 rounded-xl z-10">
+                                <div className="h-4 w-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                            </div>
+                        )}
+                        <div className="flex-1 min-w-0 pr-8">
+                            <p className="text-xs font-bold text-gray-900 dark:text-white line-clamp-1">
+                                {session.intended_major || 'Any Major'} · {session.degree_applying_for || 'Any Degree'}
+                            </p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">
+                                {new Date(session.created_at).toLocaleDateString()} • {session.total_count} results
+                            </p>
+                        </div>
+                        <div className="flex gap-2 z-20">
+                            <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); handleViewResults(session); }}
+                                className="text-[10px] text-white bg-indigo-500 hover:bg-indigo-600 px-3 py-1.5 rounded font-bold transition-colors"
+                            >
+                                View Results
+                            </button>
+                            <button
+                                type="button"
+                                onClick={(e) => handleUseInputsAgain(e, session)}
+                                className="text-[10px] text-indigo-600 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:hover:bg-indigo-900/60 px-3 py-1.5 rounded font-bold flex items-center gap-1 transition-colors"
+                            >
+                                <RotateCcw className="h-2.5 w-2.5" /> Use Inputs Again
+                            </button>
+                        </div>
+                        <button
+                            type="button"
+                            aria-label="Delete history session"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setSessionToDelete(session);
+                            }}
+                            className="absolute top-2 right-2 p-1.5 bg-gray-50 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-gray-400 hover:text-red-500 transition-all z-20"
+                        >
+                            {deletingSessionId === session.session_id ? (
+                                <div className="h-3 w-3 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                                <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                        </button>
+                    </article>
+                ))}
+            </div>
+        );
     };
 
     return (
@@ -351,110 +460,12 @@ const FindUniversities = () => {
 
                         {/* LOCAL History Tab */}
                         {historyTab === 'local' && (
-                            <>
-                                {localHistory.length > 0 ? (
-                                    <div className="space-y-2">
-                                        {localHistory.map((entry) => (
-                                            <div
-                                                key={entry.id}
-                                                className="group relative flex items-start gap-2 p-3 rounded-xl border border-transparent hover:border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all cursor-pointer"
-                                                onClick={() => handleLocalHistoryClick(entry)}
-                                            >
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-xs font-bold text-gray-900 dark:text-white line-clamp-1 group-hover:text-indigo-600 transition-colors">
-                                                        {entry.label}
-                                                    </p>
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        {entry.data?.cgpa && (
-                                                            <span className="text-[9px] bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 font-bold px-1.5 py-0.5 rounded-full">
-                                                                CGPA {entry.data.cgpa}
-                                                            </span>
-                                                        )}
-                                                        {entry.data?.country && (
-                                                            <span className="text-[9px] text-gray-400 font-medium">
-                                                                {entry.data.country}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
-                                                        <Clock className="h-2.5 w-2.5" />
-                                                        {formatRelativeTime(entry.timestamp)}
-                                                    </p>
-                                                    <p className="text-[10px] text-indigo-500 font-bold mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                                                        <RotateCcw className="h-2.5 w-2.5" /> Re-fill form ↗
-                                                    </p>
-                                                </div>
-                                                {/* Remove button */}
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); removeFromHistory(entry.id); }}
-                                                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-gray-300 hover:text-red-400"
-                                                    title="Remove"
-                                                >
-                                                    <X className="h-3 w-3" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-6">
-                                        <div className="h-10 w-10 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
-                                            <Search className="h-5 w-5 text-gray-300" />
-                                        </div>
-                                        <p className="text-xs text-gray-500 italic">No searches yet.</p>
-                                        <p className="text-[10px] text-gray-400 mt-1">Your searches will appear here for quick re-use.</p>
-                                    </div>
-                                )}
-                            </>
+                            renderHistoryList(recentHistory)
                         )}
 
                         {/* REMOTE (API) History Tab */}
                         {historyTab === 'remote' && (
-                            <>
-                                {isLoadingHistory ? (
-                                    <div className="space-y-3">
-                                        {[1, 2, 3].map(i => <div key={i} className="h-12 bg-gray-100 dark:bg-gray-700 animate-pulse rounded-xl" />)}
-                                    </div>
-                                ) : history.length > 0 ? (
-                                    <div className="space-y-2">
-                                        {history.map(session => (
-                                            <button
-                                                key={session.session_id}
-                                                onClick={() => handleHistoryClick(session)}
-                                                disabled={loadingHistoryItem === session.session_id}
-                                                className="w-full text-left p-3 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-200 border border-transparent transition-all group relative"
-                                            >
-                                                {loadingHistoryItem === session.session_id && (
-                                                    <div className="absolute inset-0 flex items-center justify-center bg-white/70 dark:bg-gray-800/70 rounded-xl">
-                                                        <div className="h-4 w-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                                                    </div>
-                                                )}
-                                                <p className="text-xs font-bold text-gray-900 dark:text-white line-clamp-1 group-hover:text-indigo-600 transition-colors pr-6">
-                                                    {session.intended_major || 'Any Major'} · {session.degree_applying_for || 'Any Degree'}
-                                                </p>
-                                                <p className="text-[10px] text-gray-400 mt-0.5">
-                                                    {new Date(session.created_at).toLocaleDateString()} • {session.total_count} results
-                                                </p>
-                                                <p className="text-[10px] text-indigo-400 font-bold mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    Click to restore & rerun ↗
-                                                </p>
-                                                <button
-                                                    type="button"
-                                                    aria-label="Delete history"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setSessionToDelete(session);
-                                                    }}
-                                                    className="absolute top-2 right-2 opacity-50 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-gray-400 hover:text-red-500 transition-all"
-                                                >
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                </button>
-                                            </button>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="text-xs text-gray-500 italic">No previous searches yet.</p>
-                                )}
-                            </>
+                            renderHistoryList(safeHistory)
                         )}
                     </div>
 
@@ -478,8 +489,16 @@ const FindUniversities = () => {
                                         "px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all cursor-pointer",
                                         viewMode === 'new' ? "bg-primary text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-500"
                                     )} onClick={() => setViewMode('new')}>
-                                        Recent Results
+                                        New Results
                                     </span>
+                                    {activeHistorySessionId && (
+                                        <span className={cn(
+                                            "px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all cursor-pointer",
+                                            viewMode === 'history' ? "bg-indigo-500 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-500"
+                                        )} onClick={() => setViewMode('history')}>
+                                            Historical Results
+                                        </span>
+                                    )}
                                     <span className={cn(
                                         "px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all cursor-pointer",
                                         viewMode === 'saved' ? "bg-primary text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-500"
@@ -675,17 +694,17 @@ const FindUniversities = () => {
                             <Button
                                 variant="outline"
                                 onClick={() => setSessionToDelete(null)}
-                                disabled={isDeletingSession || isDeletingHistory}
+                                disabled={deletingSessionId !== null || isDeletingHistory}
                             >
                                 Cancel
                             </Button>
                             <Button
                                 variant="primary"
                                 onClick={handleDeleteConfirm}
-                                disabled={isDeletingSession || isDeletingHistory}
+                                disabled={deletingSessionId !== null || isDeletingHistory}
                                 className="bg-red-500 hover:bg-red-600 border-red-500 text-white min-w-[120px]"
                             >
-                                {isDeletingSession || isDeletingHistory ? (
+                                {deletingSessionId !== null || isDeletingHistory ? (
                                     <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
                                 ) : (
                                     "Delete History"

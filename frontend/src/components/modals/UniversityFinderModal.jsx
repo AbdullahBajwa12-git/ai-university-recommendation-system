@@ -25,6 +25,20 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
   const [avoidSearch, setAvoidSearch] = useState('');
 
   const defaultVals = {
+    full_name: '',
+    email: '',
+    country: '',
+    current_degree_level: '',
+    current_university: '',
+    cgpa: '',
+    graduation_year: '',
+    degree_applying_for: '',
+    intended_major: '',
+    ielts: '',
+    toefl: '',
+    gre: '',
+    gmat: '',
+    sat: '',
     continents: [],
     countries: [],
     avoid_countries: [],
@@ -44,19 +58,32 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
     research_focused: false,
     industry_focused: false,
     top_ranked_only: false,
-    ...initialData,
+    ...(initialData || {}),
   };
 
   const { register, handleSubmit, watch, setValue, reset, trigger, formState: { errors } } = useForm({
     defaultValues: defaultVals,
   });
 
+  const [lastSource, setLastSource] = useState(null);
+
   React.useEffect(() => {
-    if (initialData) {
-      reset({ ...defaultVals, ...initialData });
-      setCurrentStep(1);
+    if (isOpen) {
+      if (prefillSource === 'history') {
+        reset(defaultVals);
+        setCurrentStep(1);
+        setLastSource('history');
+      } else {
+        if (lastSource === 'history') {
+          reset(defaultVals);
+          setCurrentStep(1);
+        } else if (initialData && lastSource === null) {
+          reset(defaultVals);
+        }
+        setLastSource(prefillSource || 'new');
+      }
     }
-  }, [initialData]); // eslint-disable-line
+  }, [isOpen, prefillSource, initialData]); // eslint-disable-line
 
   if (!isOpen) return null;
 
@@ -590,7 +617,9 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
           )}
 
           <form onSubmit={handleSubmit(handleFormSubmit)} className="flex-1 flex flex-col p-8 overflow-y-auto custom-scrollbar">
-            {renderStep()}
+            <div key={`wizard-step-${currentStep}`}>
+              {renderStep()}
+            </div>
           </form>
 
           <div className="p-6 border-t border-gray-100 dark:border-gray-800 flex justify-between bg-gray-50 dark:bg-gray-800/20">
