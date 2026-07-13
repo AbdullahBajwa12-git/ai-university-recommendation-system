@@ -232,7 +232,7 @@ const UniversityResultCard = ({
   onSave,
   onUnsave,
   isSaved,
-  isSaving,
+  isBookmarkPending,
   showCompare,
   onCompareToggle,
   isComparing
@@ -328,17 +328,36 @@ const UniversityResultCard = ({
 
             <div className="flex flex-col gap-2">
               <button
-                onClick={() => isSaved ? onUnsave() : onSave()}
-                disabled={isSaving}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  isSaved ? onUnsave() : onSave();
+                }}
+                disabled={isBookmarkPending}
+                aria-pressed={isSaved}
+                aria-label={
+                  isBookmarkPending
+                    ? (isSaved ? "Removing from saved..." : "Saving university...")
+                    : (isSaved ? "Remove university from saved" : "Save university")
+                }
                 className={cn(
-                  "h-10 w-10 rounded-full flex items-center justify-center transition-all border",
+                  "h-10 w-10 rounded-full flex items-center justify-center transition-all border outline-none focus-visible:ring-2 focus-visible:ring-primary",
                   isSaved
                     ? "bg-emerald-500 border-emerald-500 text-white"
                     : "bg-gray-50 dark:bg-gray-900 border-gray-100 dark:border-gray-700 text-gray-400 hover:text-primary hover:border-primary",
-                  isSaving && "opacity-50 cursor-not-allowed"
+                  isBookmarkPending && "opacity-50 cursor-not-allowed"
                 )}
               >
-                {isSaved ? <BookmarkCheck className="h-5 w-5" /> : <Bookmark className="h-5 w-5" />}
+                {isBookmarkPending ? (
+                  <div className={cn(
+                      "h-5 w-5 border-2 border-t-transparent rounded-full animate-spin",
+                      isSaved ? "border-white" : "border-primary"
+                  )} />
+                ) : isSaved ? (
+                  <BookmarkCheck className="h-5 w-5" />
+                ) : (
+                  <Bookmark className="h-5 w-5" />
+                )}
               </button>
               {showCompare && (
                 <button

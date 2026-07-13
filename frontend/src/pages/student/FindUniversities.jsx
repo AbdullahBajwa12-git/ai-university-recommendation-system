@@ -71,8 +71,13 @@ const FindUniversities = () => {
         saveUniversity,
         unsaveUniversity,
         isSaving,
+        savingUniversity,
+        isUnsaving,
+        unsavingSavedId,
         isLoadingHistory,
         isLoadingSaved,
+        isSavedError,
+        refetchSaved,
         getSessionDetails,
         deleteHistory,
         isDeletingHistory,
@@ -512,53 +517,107 @@ const FindUniversities = () => {
                             </p>
 
                             {/* Grid of Results */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                {displayUniversities().length > 0 ? (
-                                    displayUniversities().map((uni, idx) => (
-                                        <UniversityResultCard
-                                            key={idx}
-                                            university={uni}
-                                            onSave={() => saveUniversity({
-                                                university_id: uni.university_id || null,
-                                                university_name: uni.university_name,
-                                                country: uni.country,
-                                                city: uni.city || null,
-                                                degree: uni.degree,
-                                                major: uni.major,
-                                                admission_chance: uni.admission_chance,
-                                                category: uni.category || null,
-                                                world_rank: uni.world_rank || null,
-                                                scholarship_available: uni.scholarship_available || null,
-                                                university_email: uni.university_email || null,
-                                                university_website: uni.university_website || null,
-                                                course_page_url: uni.course_page_url || null,
-                                                tuition_fee: uni.tuition_fee || null,
-                                                acceptance_rate: uni.acceptance_rate || null,
-                                                deadline: uni.deadline || null,
-                                                reason_for_match: uni.reason_for_match || null,
-                                                session_id: activeResults?.session_id || null
-                                            })}
-                                            onUnsave={() => {
-                                                const savedItem = saved.find(s => isSameUniversity(s, uni));
-                                                if (savedItem) unsaveUniversity(savedItem.id);
-                                            }}
-                                            isSaved={saved.some(s => isSameUniversity(s, uni))}
-                                            isSaving={isSaving}
-                                            showCompare={true}
-                                            onCompareToggle={() => toggleCompare(uni)}
-                                            isComparing={comparingItems.some(s => isSameUniversity(s, uni))}
-                                        />
-                                    ))
-                                ) : (
-                                    <div className="md:col-span-2 py-20 text-center">
-                                        <div className="h-20 w-20 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
-                                            <Search className="h-10 w-10 text-gray-300" />
+                            {viewMode === 'saved' && isLoadingSaved ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {[1, 2, 3, 4].map(i => (
+                                        <div key={i} className="bg-white dark:bg-gray-800 rounded-[2rem] border border-gray-100 dark:border-gray-700 p-8 h-[400px] flex flex-col">
+                                            <div className="flex gap-4 mb-6">
+                                                <div className="h-16 w-16 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse"></div>
+                                                <div className="flex-1 space-y-3">
+                                                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3 animate-pulse"></div>
+                                                    <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4 animate-pulse"></div>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-4 mb-8">
+                                                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 animate-pulse"></div>
+                                                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full animate-pulse"></div>
+                                            </div>
+                                            <div className="mt-auto grid grid-cols-3 gap-4">
+                                                <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                                <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                                <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                                            </div>
                                         </div>
-                                        <h3 className="text-xl font-bold mb-2">No universities found here</h3>
-                                        <p className="text-gray-500 mb-8">Try searching for new recommendations or save your favorites.</p>
+                                    ))}
+                                </div>
+                            ) : viewMode === 'saved' && isSavedError ? (
+                                <div className="md:col-span-2 py-20 text-center bg-white dark:bg-gray-800 rounded-[2rem] border border-gray-100 dark:border-gray-700">
+                                    <div className="h-16 w-16 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <X className="h-8 w-8 text-red-500" />
                                     </div>
-                                )}
-                            </div>
+                                    <h3 className="text-xl font-bold mb-2">Failed to load saved universities</h3>
+                                    <p className="text-gray-500 mb-6">There was a problem loading your bookmarks. Please try again.</p>
+                                    <Button onClick={() => refetchSaved()} className="mx-auto bg-gray-900 text-white dark:bg-gray-700">
+                                        <RotateCcw className="h-4 w-4 mr-2 inline" /> Retry
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {displayUniversities().length > 0 ? (
+                                        displayUniversities().map((uni) => {
+                                            const savedItem =
+                                                viewMode === 'saved' && uni.id
+                                                    ? uni
+                                                    : saved.find((s) => isSameUniversity(s, uni));
+                                            const isSaved = !!savedItem;
+                                            const isBookmarkPending =
+                                                (isSaving && savingUniversity && isSameUniversity(savingUniversity, uni)) ||
+                                                (isUnsaving && unsavingSavedId === savedItem?.id);
+
+                                            const cardKey = uni.id || uni.university_id || `${uni.university_name}-${uni.country}`;
+
+                                            return (
+                                                <UniversityResultCard
+                                                    key={cardKey}
+                                                    university={uni}
+                                                    onSave={() => saveUniversity({
+                                                        university_id: uni.university_id || null,
+                                                        university_name: uni.university_name,
+                                                        country: uni.country,
+                                                        city: uni.city || null,
+                                                        degree: uni.degree,
+                                                        major: uni.major,
+                                                        admission_chance: uni.admission_chance,
+                                                        category: uni.category || null,
+                                                        world_rank: uni.world_rank || null,
+                                                        scholarship_available: uni.scholarship_available || null,
+                                                        university_email: uni.university_email || null,
+                                                        university_website: uni.university_website || null,
+                                                        course_page_url: uni.course_page_url || null,
+                                                        tuition_fee: uni.tuition_fee || null,
+                                                        acceptance_rate: uni.acceptance_rate || null,
+                                                        deadline: uni.deadline || null,
+                                                        reason_for_match: uni.reason_for_match || null,
+                                                        session_id: activeResults?.session_id || null
+                                                    })}
+                                                    onUnsave={() => {
+                                                        if (savedItem) unsaveUniversity(savedItem.id);
+                                                    }}
+                                                    isSaved={isSaved}
+                                                    isBookmarkPending={isBookmarkPending}
+                                                    showCompare={true}
+                                                    onCompareToggle={() => toggleCompare(uni)}
+                                                    isComparing={comparingItems.some(s => isSameUniversity(s, uni))}
+                                                />
+                                            );
+                                        })
+                                    ) : (
+                                        <div className="md:col-span-2 py-20 text-center">
+                                            <div className="h-20 w-20 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                                                <Search className="h-10 w-10 text-gray-300" />
+                                            </div>
+                                            <h3 className="text-xl font-bold mb-2">
+                                                {viewMode === 'saved' ? 'No saved universities yet' : 'No universities found here'}
+                                            </h3>
+                                            <p className="text-gray-500 mb-8">
+                                                {viewMode === 'saved'
+                                                    ? 'Your bookmarked universities will appear here. Start searching to find and save your favorites.'
+                                                    : 'Try searching for new recommendations or save your favorites.'}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                         </>
                     ) : (
