@@ -1,5 +1,5 @@
 from typing import Optional, List, Any, Annotated
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 from beanie import Document, Link, Indexed
 from pydantic import Field, EmailStr, BaseModel as PydanticBaseModel
@@ -14,7 +14,7 @@ class User(Document):
     password_hash: Optional[str] = None
     role: str = "student"  # admin | student
     is_active: bool = True
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     class Settings:
         name = "users"
@@ -36,7 +36,7 @@ class StudentProfile(Document):
     preferred_study_level: Optional[str] = None
     preferred_countries: Optional[List[str]] = None
     preferred_fields: Optional[List[str]] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     class Settings:
         name = "student_profiles"
@@ -94,7 +94,7 @@ class StudentRecommendationProfile(Document):
     industry_focused: Optional[bool] = None
     top_ranked_only: Optional[bool] = None
 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     class Settings:
         name = "student_recommendation_profiles"
@@ -127,7 +127,7 @@ class RecommendationSession(Document):
     profile_snapshot: dict = Field(default_factory=dict)    # raw form data
     universities: List[dict] = Field(default_factory=list)  # raw JSON list
     total_count: int = 0
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     class Settings:
         name = "recommendation_sessions"
@@ -158,7 +158,7 @@ class SavedUniversity(Document):
     description: Optional[str] = None
     reason_for_match: Optional[str] = None
     session_id: Optional[UUID] = None
-    saved_at: datetime = Field(default_factory=datetime.utcnow)
+    saved_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     class Settings:
         name = "saved_universities"
@@ -187,6 +187,33 @@ class FieldOfStudy(Document):
     class Settings:
         name = "fields_of_study"
 
+# ── ACADEMIC TAXONOMY ────────────────────────────────────────────────────────
+
+class AcademicDomain(Document):
+    name: str = Indexed(unique=True)
+    description: Optional[str] = None
+
+    class Settings:
+        name = "academic_domains"
+
+class CoreProgram(Document):
+    domain: Link[AcademicDomain]
+    canonical_name: str = Indexed(unique=True)
+    aliases: List[str] = Field(default_factory=list)
+
+    class Settings:
+        name = "core_programs"
+        indexes = [[("aliases", 1)]]
+
+class Specialization(Document):
+    core_program: Link[CoreProgram]
+    name: str
+    aliases: List[str] = Field(default_factory=list)
+
+    class Settings:
+        name = "specializations"
+        indexes = [[("aliases", 1)]]
+
 # ── UNIVERSITIES ────────────────────────────────────────────────────────────
 
 class ProgramEntry(PydanticBaseModel):
@@ -203,21 +230,24 @@ class ProgramEntry(PydanticBaseModel):
 
 class University(Document):
     university_name: Annotated[str, Indexed()]
+    normalized_identity: Optional[str] = Indexed(unique=True) # Normalized for duplicate prevention
     country: Annotated[str, Indexed()]
     city: Optional[str] = None
     continent: Optional[str] = None
     qs_ranking: Optional[int] = None
     acceptance_rate: Optional[float] = None
-    yearly_tuition_usd: Optional[int] = None
+    institution_type: Optional[str] = None
+    data_source: Optional[str] = None
+    source_batch_id: Optional[str] = None
+    verified_by: Optional[str] = None
+    last_verified_at: Optional[datetime] = None
+    yearly_tuition_usd: Optional[int] = None # Legacy
     website: Optional[str] = None
     admissions_url: Optional[str] = None
     admissions_email: Optional[str] = None
-    programs: List[ProgramEntry] = Field(default_factory=list)
-    study_levels: List[str] = Field(default_factory=list)
-    fields: List[str] = Field(default_factory=list)
     description: Optional[str] = None
     is_active: bool = True
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_at: Optional[datetime] = None
 
     class Settings:
@@ -231,18 +261,55 @@ class University(Document):
             [("acceptance_rate", 1)],
         ]
 
+class TuitionInfo(PydanticBaseModel):
+    amount: float
+    currency: str = "USD"
+    amount_usd: Optional[float] = None
+    original_amount: Optional[float] = None
+    original_currency: Optional[str] = None
+    fee_period: str = "ANNUAL"
+
+class AdmissionReqs(PydanticBaseModel):
+    min_cgpa: Optional[float] = None
+    cgpa_scale: Optional[float] = 4.0
+    min_ielts_overall: Optional[float] = None
+    min_toefl: Optional[int] = None
+    min_gre: Optional[int] = None
+    min_gmat: Optional[int] = None
+    min_sat: Optional[int] = None
+    interview_required: Optional[bool] = None
+
 class UniversityProgram(Document):
     university: Link[University]
-    field: Link[FieldOfStudy]
+    canonical_program: Link[CoreProgram]
+    specialization: Optional[Link[Specialization]] = None
+
     program_name: str
-    study_level: str
+    degree_level: str = Indexed()
+    track: str = "DEFAULT"
+    study_mode: str = "ON_CAMPUS"
+    instruction_language: str = "English"
     duration_months: Optional[int] = None
-    tuition_fee: Optional[int] = None
-    minimum_cgpa: Optional[float] = None
-    minimum_ielts: Optional[float] = None
+    intakes: List[str] = Field(default_factory=list)
+
+    tuition: Optional[TuitionInfo] = None
+    admission_requirements: Optional[AdmissionReqs] = None
+
+    course_page_url: Optional[str] = None
+    application_deadline: Optional[str] = None
+
+    source_batch_id: Optional[str] = None
+    dataset_version: Optional[str] = None
+    seed_version: Optional[str] = None
+    import_timestamp: Optional[str] = None
 
     class Settings:
         name = "university_programs"
+        indexes = [
+            IndexModel([("university.$id", 1), ("canonical_program.$id", 1), ("specialization.$id", 1), ("degree_level", 1), ("track", 1)], unique=True),
+            [("tuition.amount_usd", 1)],
+            [("admission_requirements.min_cgpa", 1)]
+        ]
 
 # ── AI & APPLICATIONS ───────────────────────────────────────────────────────
 
@@ -253,7 +320,7 @@ class AdmissionPrediction(Document):
     category: str  # SAFE | MODERATE | REACH
     explanation: str
     model_used: str = "GPT-4o"
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     class Settings:
         name = "admission_predictions"
@@ -263,7 +330,7 @@ class Application(Document):
     program: Link[UniversityProgram]
     status: str = "Applied"  # Applied|Pending|Accepted|Rejected
     notes: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     class Settings:
         name = "applications"
@@ -285,7 +352,7 @@ class Scholarship(Document):
     apply_url: Optional[str] = None
     description: Optional[str] = None
     is_active: bool = True
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_at: Optional[datetime] = None
 
     class Settings:
@@ -301,6 +368,9 @@ ALL_MODELS = [
     SavedUniversity,
     Country,
     FieldOfStudy,
+    AcademicDomain,
+    CoreProgram,
+    Specialization,
     University,
     UniversityProgram,
     AdmissionPrediction,

@@ -1,0 +1,51 @@
+institution_id,university_name,country,city,continent,qs_ranking,institution_type,acceptance_rate,website,logo_url,data_source,verified_by,last_verified_at
+UNI_USA_MIT,Massachusetts Institute of Technology,United States,Cambridge,North America,1,PRIVATE,0.04,https://mit.edu,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_USA_STANFORD,Stanford University,United States,Stanford,North America,3,PRIVATE,0.04,https://stanford.edu,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_USA_HARVARD,Harvard University,United States,Cambridge,North America,4,PRIVATE,0.03,https://harvard.edu,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_USA_UCB,"University of California, Berkeley",United States,Berkeley,North America,27,PUBLIC,0.11,https://berkeley.edu,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_USA_UTEXAS,University of Texas at Austin,United States,Austin,North America,72,PUBLIC,0.31,https://utexas.edu,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_USA_NYU,New York University,United States,New York,North America,39,PRIVATE,0.12,https://nyu.edu,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_USA_MICHIGAN,University of Michigan,United States,Ann Arbor,North America,25,PUBLIC,0.2,https://umich.edu,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_USA_GEORGIA,Georgia Institute of Technology,United States,Atlanta,North America,88,PUBLIC,0.16,https://gatech.edu,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_USA_ASU,Arizona State University,United States,Tempe,North America,216,PUBLIC,0.88,https://asu.edu,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_USA_SJSU,San Jose State University,United States,San Jose,North America,400,PUBLIC,0.67,https://sjsu.edu,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_CAN_TORONTO,University of Toronto,Canada,Toronto,North America,21,PUBLIC,0.43,https://utoronto.ca,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_CAN_UBC,University of British Columbia,Canada,Vancouver,North America,34,PUBLIC,0.52,https://ubc.ca,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_CAN_MCGILL,McGill University,Canada,Montreal,North America,30,PUBLIC,0.46,https://mcgill.ca,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_CAN_WATERLOO,University of Waterloo,Canada,Waterloo,North America,112,PUBLIC,0.53,https://uwaterloo.ca,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_CAN_ALBERTA,University of Alberta,Canada,Edmonton,North America,111,PUBLIC,0.58,https://ualberta.ca,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_GBR_OXFORD,University of Oxford,United Kingdom,Oxford,Europe,3,PUBLIC,0.17,https://ox.ac.uk,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_GBR_CAMBRIDGE,University of Cambridge,United Kingdom,Cambridge,Europe,2,PUBLIC,0.21,https://cam.ac.uk,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_GBR_ICL,Imperial College London,United Kingdom,London,Europe,6,PUBLIC,0.15,https://imperial.ac.uk,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_GBR_EDINBURGH,University of Edinburgh,United Kingdom,Edinburgh,Europe,22,PUBLIC,0.1,https://ed.ac.uk,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_GBR_MANCHESTER,University of Manchester,United Kingdom,Manchester,Europe,32,PUBLIC,0.56,https://manchester.ac.uk,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_DEU_TUM,Technical University of Munich,Germany,Munich,Europe,37,PUBLIC,0.08,https://tum.de,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_DEU_LMU,LMU Munich,Germany,Munich,Europe,54,PUBLIC,0.16,https://lmu.de,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_DEU_HEIDELBERG,Heidelberg University,Germany,Heidelberg,Europe,87,PUBLIC,0.16,https://uni-heidelberg.de,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_DEU_RWTH,RWTH Aachen University,Germany,Aachen,Europe,106,PUBLIC,0.1,https://rwth-aachen.de,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_FRA_SORBONNE,Sorbonne University,France,Paris,Europe,59,PUBLIC,0.1,https://sorbonne-universite.fr,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_FRA_POLYTECHNIQUE,Ecole Polytechnique,France,Palaiseau,Europe,65,PUBLIC,0.05,https://polytechnique.edu,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_NLD_DELFT,TU Delft,Netherlands,Delft,Europe,47,PUBLIC,0.1,https://tudelft.nl,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_NLD_AMSTERDAM,University of Amsterdam,Netherlands,Amsterdam,Europe,53,PUBLIC,0.04,https://uva.nl,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_CHE_ETH,ETH Zurich,Switzerland,Zurich,Europe,7,PUBLIC,0.27,https://ethz.ch,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_CHE_EPFL,EPFL,Switzerland,Lausanne,Europe,36,PUBLIC,0.21,https://epfl.ch,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_SGP_NUS,National University of Singapore,Singapore,Singapore,Asia,8,PUBLIC,0.05,https://nus.edu.sg,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_SGP_NTU,Nanyang Technological University,Singapore,Singapore,Asia,26,PUBLIC,0.36,https://ntu.edu.sg,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_JPN_TOKYO,University of Tokyo,Japan,Tokyo,Asia,28,PUBLIC,0.34,https://u-tokyo.ac.jp,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_JPN_KYOTO,Kyoto University,Japan,Kyoto,Asia,46,PUBLIC,0.4,https://kyoto-u.ac.jp,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_CHN_TSINGHUA,Tsinghua University,China,Beijing,Asia,25,PUBLIC,0.02,https://tsinghua.edu.cn,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_CHN_PEKING,Peking University,China,Beijing,Asia,17,PUBLIC,0.02,https://pku.edu.cn,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_IND_IITB,IIT Bombay,India,Mumbai,Asia,149,PUBLIC,0.01,https://iitb.ac.in,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_IND_IITD,IIT Delhi,India,New Delhi,Asia,197,PUBLIC,0.01,https://iitd.ac.in,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_KOR_SNU,Seoul National University,South Korea,Seoul,Asia,41,PUBLIC,0.15,https://snu.ac.kr,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_KOR_KAIST,KAIST,South Korea,Daejeon,Asia,56,PUBLIC,0.2,https://kaist.ac.kr,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_AUS_MELBOURNE,University of Melbourne,Australia,Melbourne,Oceania,14,PUBLIC,0.7,https://unimelb.edu.au,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_AUS_SYDNEY,University of Sydney,Australia,Sydney,Oceania,19,PUBLIC,0.3,https://sydney.edu.au,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_AUS_UNSW,UNSW Sydney,Australia,Sydney,Oceania,19,PUBLIC,0.6,https://unsw.edu.au,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_AUS_MONASH,Monash University,Australia,Melbourne,Oceania,42,PUBLIC,0.4,https://monash.edu,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_NZL_AUCKLAND,University of Auckland,New Zealand,Auckland,Oceania,68,PUBLIC,0.45,https://auckland.ac.nz,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_ZAF_CAPE,University of Cape Town,South Africa,Cape Town,Africa,173,PUBLIC,0.5,https://uct.ac.za,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_ZAF_WITS,Wits University,South Africa,Johannesburg,Africa,264,PUBLIC,0.55,https://wits.ac.za,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_BRA_USP,University of Sao Paulo,Brazil,Sao Paulo,South America,85,PUBLIC,0.08,https://usp.br,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_MEX_UNAM,UNAM,Mexico,Mexico City,North America,93,PUBLIC,0.1,https://unam.mx,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z
+UNI_ARG_UBA,University of Buenos Aires,Argentina,Buenos Aires,South America,95,PUBLIC,0.5,https://uba.ar,,PILOT_V1_MANUAL,auto_gen_v1,2026-07-14T05:02:05.155096Z

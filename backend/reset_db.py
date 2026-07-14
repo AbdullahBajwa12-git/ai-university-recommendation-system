@@ -1,13 +1,14 @@
 import asyncio
-from motor.motor_asyncio import AsyncIOMotorClient
-from database import MONGODB_URL, DATABASE_NAME
+from database import init_db
+from models import ALL_MODELS, University, UniversityProgram, CoreProgram, AcademicDomain
 
 async def reset():
-    client = AsyncIOMotorClient(MONGODB_URL)
-    db = client[DATABASE_NAME]
-    await db['users'].drop()
-    await db['student_profiles'].drop()
-    print("Database users and profiles cleared.")
+    await init_db(models=ALL_MODELS)
+    await University.find_all().delete()
+    await UniversityProgram.find_all().delete()
+    await CoreProgram.find_all().delete()
+    await AcademicDomain.find_all().delete()
+    print("DB reset complete.")
 
 if __name__ == "__main__":
     asyncio.run(reset())
