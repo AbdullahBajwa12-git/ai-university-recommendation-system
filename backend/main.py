@@ -31,7 +31,13 @@ app = FastAPI(title="AI University Advisor API (MongoDB)", version="2.0.0", life
 # CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://studyroute-kappa.vercel.app",
+        "https://studyroute.online",
+        "https://www.studyroute.online"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
