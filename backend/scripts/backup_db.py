@@ -1,7 +1,7 @@
 import os
 import asyncio
 from datetime import datetime
-from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import AsyncMongoClient
 from dotenv import load_dotenv
 
 async def backup_database():
@@ -12,7 +12,7 @@ async def backup_database():
     db_name = os.getenv("DATABASE_NAME", "edu_helper")
 
     print(f"Connecting to {mongo_url}...")
-    client = AsyncIOMotorClient(mongo_url)
+    client = AsyncMongoClient(mongo_url)
 
     # Ping the server to check connection
     try:

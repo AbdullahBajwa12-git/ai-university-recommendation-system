@@ -1,9 +1,9 @@
 import asyncio
-from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import AsyncMongoClient
 from database import MONGODB_URL, DATABASE_NAME
 
 async def check():
-    client = AsyncIOMotorClient(MONGODB_URL)
+    client = AsyncMongoClient(MONGODB_URL)
     db = client[DATABASE_NAME]
     users = await db['users'].find().to_list(100)
     print(f"Total Users: {len(users)}")

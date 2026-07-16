@@ -677,7 +677,7 @@ def compare_field(field_name, db_val, csv_str, parser=None, is_url=False,
 async def run_dry_run_comparison(SCRIPT_DIR, uni_csv, prog_csv, country=None, limit=None):
     import os
     from dotenv import load_dotenv
-    from motor.motor_asyncio import AsyncIOMotorClient
+    from pymongo import AsyncMongoClient
 
     load_dotenv(SCRIPT_DIR.parent / ".env")
 
@@ -693,7 +693,7 @@ async def run_dry_run_comparison(SCRIPT_DIR, uni_csv, prog_csv, country=None, li
         sys.exit(1)
 
     print("\nDRY RUN - NO APPLICATION DATA WAS WRITTEN")
-    print("  Direct Motor read path used.")
+    print("  Direct PyMongo read path used.")
     print("  Beanie initialization was not called.")
     print("  No MongoDB write command was issued.")
     print("  Note: Beanie init (not called here) may create indexes as metadata.")
@@ -723,7 +723,7 @@ async def run_dry_run_comparison(SCRIPT_DIR, uni_csv, prog_csv, country=None, li
     comparison_succeeded = False
 
     try:
-        client = AsyncIOMotorClient(
+        client = AsyncMongoClient(
             mongodb_url,
             uuidRepresentation="standard",
             serverSelectionTimeoutMS=5000
@@ -1328,7 +1328,7 @@ def verify_new_university(plan_u, post_doc, docs_for_collision_check):
 async def run_apply_mode(SCRIPT_DIR, uni_csv, prog_csv, country=None, limit=None):
     import os
     from dotenv import load_dotenv
-    from motor.motor_asyncio import AsyncIOMotorClient
+    from pymongo import AsyncMongoClient
 
     load_dotenv(SCRIPT_DIR.parent / ".env")
 
@@ -1347,7 +1347,7 @@ async def run_apply_mode(SCRIPT_DIR, uni_csv, prog_csv, country=None, limit=None
     print("="*40)
     print("Executing explicitly verified --apply mode.")
     print("This mode requires exclusive execution. External writers must be paused.")
-    print("No Beanie ODM models are used. Raw Motor updates enforce safety.")
+    print("No Beanie ODM models are used. Raw PyMongo updates enforce safety.")
 
     res = parse_and_validate_csvs(SCRIPT_DIR, uni_csv, prog_csv)
 
@@ -1370,7 +1370,7 @@ async def run_apply_mode(SCRIPT_DIR, uni_csv, prog_csv, country=None, limit=None
     client = None
     lock_token = None
     try:
-        client = AsyncIOMotorClient(
+        client = AsyncMongoClient(
             mongodb_url,
             uuidRepresentation="standard",
             serverSelectionTimeoutMS=5000

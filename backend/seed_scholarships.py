@@ -8,7 +8,7 @@ Usage (inside the backend container, from /app):
     python seed_scholarships.py
 """
 import asyncio
-from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import AsyncMongoClient
 from beanie import init_beanie
 from database import MONGODB_URL, DATABASE_NAME
 import models
@@ -108,7 +108,7 @@ SCHOLARSHIPS = [
 
 
 async def seed_scholarships():
-    client = AsyncIOMotorClient(MONGODB_URL, uuidRepresentation="standard")
+    client = AsyncMongoClient(MONGODB_URL, uuidRepresentation="standard")
     await init_beanie(database=client[DATABASE_NAME], document_models=models.ALL_MODELS)
 
     created = 0

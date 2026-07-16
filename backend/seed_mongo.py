@@ -1,12 +1,12 @@
 import asyncio
 import os
-from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import AsyncMongoClient
 from beanie import init_beanie
 from database import MONGODB_URL, DATABASE_NAME
 import models
 
 async def seed_data():
-    client = AsyncIOMotorClient(MONGODB_URL)
+    client = AsyncMongoClient(MONGODB_URL)
     await init_beanie(database=client[DATABASE_NAME], document_models=models.ALL_MODELS)
 
     # 1. Seed Countries
