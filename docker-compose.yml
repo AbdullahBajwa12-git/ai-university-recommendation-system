@@ -51,5 +51,15 @@ services:
     depends_on:
       - backend
 
+  # ── Landing Page (Front-End Concept) ────────────────────────────────────────
+  landing:
+    build:
+      context: ./front-end-concept
+      dockerfile: Dockerfile
+    container_name: landing_fyp
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+
 volumes:
   mongodb_data:
