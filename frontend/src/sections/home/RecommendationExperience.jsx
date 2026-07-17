@@ -18,9 +18,8 @@ export const RecommendationExperience = () => {
       let { isReduced } = context.conditions;
 
       if (!isReduced) {
-        gsap.fromTo('.rec-card',
-          { opacity: 0, y: 30 },
-          {
+        gsap.set('.rec-card', { opacity: 0, y: 30 });
+        gsap.to('.rec-card', {
             opacity: 1,
             y: 0,
             duration: 0.8,
@@ -33,16 +32,11 @@ export const RecommendationExperience = () => {
           }
         );
       } else {
-        gsap.to('.rec-card', {
-          opacity: 1,
-          duration: 0.5,
-          scrollTrigger: {
-            trigger: containerRef.current,
-            start: 'top 80%',
-          }
-        });
+        gsap.set('.rec-card', { opacity: 1, y: 0, clearProps: 'transform' });
       }
     });
+
+    return () => mm.revert();
   }, { scope: containerRef });
 
   return (
@@ -84,7 +78,7 @@ export const RecommendationExperience = () => {
             <div className="w-full max-w-md space-y-4 relative z-10">
 
               {/* Profile Chips */}
-              <div className="rec-card opacity-0 flex flex-wrap gap-2 mb-6 p-4 bg-bg-surface/80 glass rounded-xl border border-border-subtle">
+              <div className="rec-card flex flex-wrap gap-2 mb-6 p-4 bg-bg-surface/80 glass rounded-xl border border-border-subtle">
                 <span className="text-xs font-medium text-text-secondary w-full mb-1">Your Preferences</span>
                 <span className="px-3 py-1 bg-bg-base rounded border border-border-subtle text-xs">Computer Science</span>
                 <span className="px-3 py-1 bg-bg-base rounded border border-border-subtle text-xs">United Kingdom</span>
@@ -92,7 +86,7 @@ export const RecommendationExperience = () => {
               </div>
 
               {/* Card 1 - Target */}
-              <div className="rec-card opacity-0 p-5 bg-bg-surface border border-border-subtle rounded-xl flex items-center justify-between group hover:border-border-focus transition-colors">
+              <div className="rec-card p-5 bg-bg-surface border border-border-subtle rounded-xl flex items-center justify-between group hover:border-border-focus transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded bg-bg-base border border-border-subtle flex items-center justify-center">
                     <div className="w-6 h-6 rounded-sm bg-dest-1/30" />
@@ -112,7 +106,7 @@ export const RecommendationExperience = () => {
               </div>
 
               {/* Card 2 - Safe */}
-              <div className="rec-card opacity-0 p-5 bg-bg-surface border border-border-subtle rounded-xl flex items-center justify-between group hover:border-border-focus transition-colors">
+              <div className="rec-card p-5 bg-bg-surface border border-border-subtle rounded-xl flex items-center justify-between group hover:border-border-focus transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded bg-bg-base border border-border-subtle flex items-center justify-center">
                     <div className="w-6 h-6 rounded-sm bg-dest-2/30" />

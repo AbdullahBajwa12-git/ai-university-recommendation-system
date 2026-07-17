@@ -110,6 +110,7 @@ export const Hero = () => {
       }
     });
 
+    return () => mm.revert();
   }, { scope: containerRef });
 
   return (

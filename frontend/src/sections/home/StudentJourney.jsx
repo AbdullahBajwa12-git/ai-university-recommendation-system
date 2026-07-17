@@ -22,11 +22,14 @@ export const StudentJourney = () => {
       let { isDesktop, isMobile, isReduced } = context.conditions;
 
       if (isReduced) {
-        gsap.set('.journey-stage', { opacity: 1, y: 0 });
-        gsap.set(headingRef.current, { opacity: 1, y: 0 });
-        if (lineRef.current) gsap.set(lineRef.current, { scaleX: 1 });
+        gsap.set('.journey-stage', { opacity: 1, y: 0, clearProps: 'transform' });
+        gsap.set(headingRef.current, { opacity: 1, y: 0, clearProps: 'transform' });
+        if (lineRef.current) gsap.set(lineRef.current, { scaleX: 1, clearProps: 'transform' });
         return;
       }
+      
+      gsap.set('.journey-stage', { opacity: 0, y: isMobile ? 18 : 24 });
+      gsap.set(headingRef.current, { opacity: 0, y: 20 });
 
       // 1. Heading Reveal
       gsap.fromTo(headingRef.current,
@@ -83,12 +86,14 @@ export const StudentJourney = () => {
         );
       }
     });
+    
+    return () => mm.revert();
   }, { scope: containerRef });
 
   return (
     <section id="journey" ref={containerRef} className="py-24 lg:py-32 bg-bg-base border-t border-border-subtle">
       <Container>
-        <div ref={headingRef} className="opacity-0">
+        <div ref={headingRef}>
           <SectionHeading
             title="The Student Journey"
             description="A clear, logical pathway from initial discovery to making informed decisions about your future."
@@ -108,7 +113,7 @@ export const StudentJourney = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4 relative">
             {journeyStages.map((stage, index) => (
-              <div key={index} className="journey-stage opacity-0 flex flex-col items-center text-center px-4">
+              <div key={index} className="journey-stage flex flex-col items-center text-center px-4">
                 <div className="w-12 h-12 rounded-full bg-bg-surface border border-border-focus flex items-center justify-center text-landing-accent font-medium mb-6 relative z-10">
                   {index + 1}
                 </div>

@@ -4,6 +4,7 @@ import { Outlet } from 'react-router-dom';
 import { Navbar } from '../components/layout/Navbar';
 import { Footer } from '../components/layout/Footer';
 import { gsap, ScrollTrigger } from '../animations/gsapSetup';
+import 'lenis/dist/lenis.css';
 
 const MainLayout = () => {
   const lenisRef = useRef(null);
@@ -40,9 +41,40 @@ const MainLayout = () => {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const refresh = () => {
+      if (!cancelled) {
+        requestAnimationFrame(() => {
+          ScrollTrigger.refresh();
+        });
+      }
+    };
+
+    document.fonts?.ready?.then(refresh);
+    window.addEventListener('load', refresh);
+    window.addEventListener('resize', refresh);
+
+    const timer = window.setTimeout(refresh, 150);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      window.removeEventListener('load', refresh);
+      window.removeEventListener('resize', refresh);
+    };
+  }, []);
+
   return (
-    // 6. autoRaf is false, exactly one Lenis RAF source via GSAP ticker
-    <ReactLenis root ref={lenisRef} autoRaf={false}>
+    <ReactLenis
+      root
+      ref={lenisRef}
+      options={{
+        autoRaf: false,
+        smoothWheel: true,
+      }}
+    >
       <div className="min-h-screen flex flex-col bg-bg-base text-text-primary">
         <Navbar />
 
