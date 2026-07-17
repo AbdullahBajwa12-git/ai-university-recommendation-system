@@ -34,7 +34,7 @@ const StudentLayout = () => {
   };
 
   const navItems = [
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Find Universities', path: '/find-universities', icon: Sparkles, highlight: true },
     { name: 'Profile', path: '/profile', icon: UserCircle },
     { name: 'Preferences', path: '/preferences', icon: SlidersHorizontal },

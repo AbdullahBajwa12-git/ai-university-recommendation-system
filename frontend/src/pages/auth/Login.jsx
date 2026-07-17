@@ -34,7 +34,7 @@ const Login = () => {
       if (user.role === 'admin') {
         navigate('/admin');
       } else {
-        navigate('/');
+        navigate('/dashboard');
       }
     } catch (err) {
       setError(err.response?.data?.detail || 'Invalid email or password');

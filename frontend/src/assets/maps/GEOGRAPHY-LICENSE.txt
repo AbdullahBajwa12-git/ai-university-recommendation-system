@@ -1,0 +1,6 @@
+Geography Source: Natural Earth
+Dataset Type/Resolution Used: Admin 0 - Countries, 1:110m (Simplified)
+License: Public Domain (Natural Earth data is public domain)
+Intermediary Dataset Location: D3 Graph Gallery (https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson)
+
+Note: This local SVG was simplified and specifically projected via D3 Orthographic projection to center on Asia/Pakistan for the StudyRoute Hero visual. This visual representation is conceptual and does not claim geographic exactness. D3 Graph Gallery does not own or license the geography.

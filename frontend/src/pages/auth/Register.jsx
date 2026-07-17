@@ -38,8 +38,8 @@ const Register = () => {
         password: data.password,
         role: 'student'
       });
-      // registerUser now handles auto-login and navigation will happen naturally or we can force it
-      navigate('/');
+      toast.success('Account created successfully!');
+      navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.detail || 'Registration failed. Try a different email.');
     } finally {

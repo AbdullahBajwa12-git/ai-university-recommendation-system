@@ -3,9 +3,13 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
 
 // Layouts
+import LandingLayout from '../layouts/LandingLayout';
 import StudentLayout from '../layouts/StudentLayout';
 import AdminLayout from '../layouts/AdminLayout';
 import AuthLayout from '../layouts/AuthLayout';
+
+// Public Pages
+import LandingPage from '../pages/LandingPage';
 
 // Auth Pages
 import Login from '../pages/auth/Login';
@@ -34,6 +38,11 @@ import ManageScholarships from '../pages/admin/ManageScholarships';
 const AppRoutes = () => {
   return (
     <Routes>
+      {/* Public Landing Page */}
+      <Route element={<LandingLayout />}>
+        <Route path="/" element={<LandingPage />} />
+      </Route>
+
       {/* Auth Routes */}
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Login />} />
@@ -46,7 +55,7 @@ const AppRoutes = () => {
       {/* Student Routes */}
       <Route element={<ProtectedRoute allowedRoles={['student']} />}>
         <Route element={<StudentLayout />}>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/find-universities" element={<FindUniversities />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/preferences" element={<Preferences />} />
