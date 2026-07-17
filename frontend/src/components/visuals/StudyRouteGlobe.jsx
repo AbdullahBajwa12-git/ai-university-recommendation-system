@@ -112,7 +112,7 @@ export const StudyRouteGlobe = ({ isMobile }) => {
             backgroundColor: 'var(--color-globe-surface)'
           }}
         >
-        <div className="absolute inset-0 bg-accent/5 rounded-full blur-2xl" />
+        <div className="absolute inset-0 rounded-full blur-2xl opacity-5" style={{ backgroundColor: 'var(--color-landing-accent)' }} />
 
         {/* Scaled inline map to ensure Pakistan is visible and positioned nicely */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-80 globe-map scale-110">
@@ -131,7 +131,7 @@ export const StudyRouteGlobe = ({ isMobile }) => {
         <div className="pakistan-pin absolute top-[49%] left-[51%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-20">
            <div className="relative flex items-center justify-center">
              <span className="absolute w-6 h-6 rounded-full bg-[var(--color-globe-origin-glow)] animate-pulse-slow" />
-             <span className="w-2 h-2 rounded-full bg-accent z-10 shadow-[0_0_8px_rgba(212,175,55,0.8)]" />
+             <span className="w-2 h-2 rounded-full bg-landing-accent z-10 shadow-[0_0_8px_rgba(212,175,55,0.8)]" />
            </div>
            {/* Label for Pakistan */}
            <div className="mt-1.5 px-2 py-0.5 bg-bg-surface/80 border border-border-subtle rounded text-[9px] font-medium text-text-primary backdrop-blur-sm whitespace-nowrap">
@@ -151,11 +151,7 @@ export const StudyRouteGlobe = ({ isMobile }) => {
         </div>
       </div>
 
-      {/* Orbit Rings (decorative) */}
-      <div className="hero-visual-el absolute w-[130%] h-[130%] max-w-[600px] max-h-[600px] border border-border-subtle/30 rounded-full -rotate-12 pointer-events-none" />
-      {!isMobile && (
-        <div className="hero-visual-el absolute w-[100%] h-[150%] max-w-[450px] max-h-[650px] border border-border-subtle/20 rounded-full rotate-45 pointer-events-none" />
-      )}
+      {/* Orbit Rings (decorative) removed per request */}
 
       {/* Connection Lines & Airplanes Overlay SVG */}
       <svg className="hero-visual-el absolute inset-0 w-full h-full z-20 pointer-events-none overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -221,7 +217,7 @@ export const StudyRouteGlobe = ({ isMobile }) => {
               {/* Airplane */}
               <g
                 id={`${idPrefix}-${dest.id}-plane`}
-                className="motion-path-plane text-accent"
+                className="motion-path-plane text-landing-accent"
                 style={{ visibility: 'hidden' }}
               >
                 <g id={`${idPrefix}-${dest.id}-fade`} style={{ opacity: 0 }}>

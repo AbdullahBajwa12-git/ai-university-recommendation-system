@@ -75,14 +75,16 @@ const MainLayout = () => {
         smoothWheel: true,
       }}
     >
-      <div className="min-h-screen flex flex-col bg-bg-base text-text-primary">
-        <Navbar />
+      <div className="landing-page">
+        <div className="min-h-screen flex flex-col bg-bg-base text-text-primary">
+          <Navbar />
 
-        <main className="flex-grow">
-          <Outlet />
-        </main>
+          <main className="flex-grow">
+            <Outlet />
+          </main>
 
-        <Footer />
+          <Footer />
+        </div>
       </div>
     </ReactLenis>
   );

@@ -45,6 +45,9 @@
     --color-globe-route-vapor: rgba(255, 255, 255, 0.25);
     --color-globe-route-highlight: rgba(255, 255, 255, 0.15);
     --color-globe-origin-glow: rgba(212, 175, 55, 0.25);
+    --color-dest-1: #60a5fa;
+    --color-dest-2: #34d399;
+    --color-dest-3: #fb7185;
   }
 
   .dark {
@@ -76,6 +79,16 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  .landing-page h1,
+  .landing-page h2,
+  .landing-page h3,
+  .landing-page h4,
+  .landing-page h5,
+  .landing-page h6 {
+    font-family: theme('fontFamily.editorial');
+    font-weight: 400;
+    letter-spacing: -0.02em;
   }
 }
 
