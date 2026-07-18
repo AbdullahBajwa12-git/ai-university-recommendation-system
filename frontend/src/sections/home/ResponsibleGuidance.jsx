@@ -9,7 +9,7 @@ export const ResponsibleGuidance = () => {
   useRevealAnimation(sectionRef);
 
   return (
-    <section id="guidance" ref={sectionRef} className="py-24 lg:py-32 bg-bg-surface border-t border-border-subtle relative overflow-hidden">
+    <section id="guidance" ref={sectionRef} className="py-24 lg:py-32 scroll-mt-20 bg-bg-surface border-t border-border-subtle relative overflow-hidden">
       <Container>
         <div className="max-w-4xl mx-auto bg-bg-base/50 glass rounded-2xl p-8 md:p-12 lg:p-16 border border-border-subtle relative">
 

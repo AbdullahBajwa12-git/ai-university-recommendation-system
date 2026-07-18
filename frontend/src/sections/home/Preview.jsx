@@ -11,7 +11,7 @@ export const Preview = () => {
   useRevealAnimation(sectionRef);
 
   return (
-    <section id="how-it-works" ref={sectionRef} className="py-24 lg:py-32 bg-bg-surface relative border-t border-border-subtle overflow-hidden">
+    <section id="how-it-works" ref={sectionRef} className="py-24 lg:py-32 scroll-mt-20 bg-bg-surface relative border-t border-border-subtle overflow-hidden">
       <Container>
         <SectionHeading
           title="How StudyRoute Helps"

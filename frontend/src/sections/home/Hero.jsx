@@ -114,7 +114,7 @@ export const Hero = () => {
   }, { scope: containerRef });
 
   return (
-    <section ref={containerRef} className="relative min-h-[100svh] flex flex-col justify-center pt-28 pb-12 lg:pt-28 lg:pb-16 overflow-hidden">
+    <section id="home" ref={containerRef} className="relative min-h-[100svh] flex flex-col justify-center pt-28 pb-12 lg:pt-28 lg:pb-16 overflow-hidden">
       {/* Abstract Background Gradient */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-landing-accent/5 rounded-full blur-[120px] -z-10 pointer-events-none" aria-hidden="true" />
 

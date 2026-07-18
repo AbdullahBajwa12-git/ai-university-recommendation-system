@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useGSAP } from '@gsap/react';
 import { gsap } from '../../animations/gsapSetup';
 import { Container } from './Container';
@@ -36,15 +37,97 @@ export const Navbar = () => {
   // Mobile menu animation
   useGSAP(() => {
     if (isOpen) {
-      gsap.to(menuRef.current, { autoAlpha: 1, duration: 0.3, ease: 'power2.out' });
-      gsap.fromTo(menuInnerRef.current,
-        { y: -20, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.4, ease: 'power2.out', delay: 0.1 }
-      );
+      // Lock body scroll and prevent Lenis from scrolling
+      document.body.style.overflow = 'hidden';
+      // Wait for React to render the portal element before animating
+      requestAnimationFrame(() => {
+        if (menuRef.current) {
+          gsap.to(menuRef.current, { autoAlpha: 1, duration: 0.3, ease: 'power2.out' });
+        }
+        if (menuInnerRef.current) {
+          gsap.fromTo(menuInnerRef.current,
+            { y: -20, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.4, ease: 'power2.out', delay: 0.1 }
+          );
+        }
+      });
     } else {
-      gsap.to(menuRef.current, { autoAlpha: 0, duration: 0.3, ease: 'power2.in' });
+      document.body.style.overflow = '';
+      if (menuRef.current) {
+        gsap.to(menuRef.current, { autoAlpha: 0, duration: 0.3, ease: 'power2.in' });
+      }
     }
+    
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [isOpen]);
+
+  const handleNavClick = (e, href) => {
+    // If it's a hash link, handle it smoothly
+    if (href.startsWith('#')) {
+      e.preventDefault();
+      closeMenu();
+      
+      const targetId = href.substring(1);
+      // Wait for menu to close and body scroll to unlock before scrolling
+      setTimeout(() => {
+        const el = document.getElementById(targetId);
+        if (el) {
+          // Native smooth scroll (Lenis will pick this up if active)
+          el.scrollIntoView({ behavior: 'smooth' });
+        } else {
+          // Fallback if ID is different (e.g., #how-it-works vs #journey)
+          const fallbackMap = {
+            'how-it-works': 'journey',
+            'home': 'root' // or top of page
+          };
+          const fallbackEl = document.getElementById(fallbackMap[targetId]);
+          if (fallbackEl) fallbackEl.scrollIntoView({ behavior: 'smooth' });
+          else if (targetId === 'home') window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }, 300);
+    }
+  };
+
+  const mobileMenuContent = (
+    <div
+      id="mobile-menu"
+      ref={menuRef}
+      className="fixed inset-0 top-20 bg-bg-base/95 backdrop-blur-xl z-[100] invisible md:hidden h-[calc(100vh-5rem)] overflow-y-auto"
+      aria-hidden={!isOpen}
+    >
+      <Container className="h-full flex flex-col pt-8 pb-12">
+        <div ref={menuInnerRef} className="flex flex-col space-y-6 flex-grow">
+          <ul className="flex flex-col space-y-4">
+            {navLinks.map((link) => (
+              <li key={link.label}>
+                <a
+                  href={link.href}
+                  className="block text-2xl font-editorial text-text-secondary hover:text-landing-accent transition-colors py-2 outline-none-focus rounded"
+                  onClick={(e) => handleNavClick(e, link.href)}
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+          <div className="pt-8 border-t border-border-subtle mt-auto flex flex-col space-y-4">
+            <a
+              href="/login"
+              className="block text-center text-lg font-medium text-text-secondary hover:text-text-primary transition-colors py-2 outline-none-focus rounded"
+              onClick={closeMenu}
+            >
+              Sign In
+            </a>
+            <Button className="w-full" onClick={() => { closeMenu(); window.location.href = '/login'; }}>
+              Find Universities
+            </Button>
+          </div>
+        </div>
+      </Container>
+    </div>
+  );
 
   return (
     <header
@@ -56,7 +139,7 @@ export const Navbar = () => {
       <Container>
         <nav className="flex items-center justify-between h-20" aria-label="Main Navigation">
           {/* Logo */}
-          <a href="/" className="outline-none-focus rounded flex items-center" onClick={closeMenu}>
+          <a href="/" className="outline-none-focus rounded flex items-center" onClick={(e) => handleNavClick(e, '#home')}>
             <img
               src={studyrouteLogoLight}
               alt="StudyRoute"
@@ -72,6 +155,7 @@ export const Navbar = () => {
                   <a
                     href={link.href}
                     className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors outline-none-focus rounded px-2 py-1"
+                    onClick={(e) => handleNavClick(e, link.href)}
                   >
                     {link.label}
                   </a>
@@ -106,43 +190,8 @@ export const Navbar = () => {
         </nav>
       </Container>
 
-      {/* Mobile Menu Panel */}
-      <div
-        id="mobile-menu"
-        ref={menuRef}
-        className="fixed inset-0 top-20 bg-bg-base/95 backdrop-blur-xl z-40 invisible md:hidden h-[calc(100vh-5rem)] overflow-y-auto"
-        aria-hidden={!isOpen}
-      >
-        <Container className="h-full flex flex-col pt-8 pb-12">
-          <div ref={menuInnerRef} className="flex flex-col space-y-6 flex-grow">
-            <ul className="flex flex-col space-y-4">
-              {navLinks.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="block text-2xl font-editorial text-text-secondary hover:text-landing-accent transition-colors py-2 outline-none-focus rounded"
-                    onClick={closeMenu}
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-            <div className="pt-8 border-t border-border-subtle mt-auto flex flex-col space-y-4">
-              <a
-                href="/login"
-                className="block text-center text-lg font-medium text-text-secondary hover:text-text-primary transition-colors py-2 outline-none-focus rounded"
-                onClick={closeMenu}
-              >
-                Sign In
-              </a>
-              <Button className="w-full" onClick={() => { closeMenu(); window.location.href = '/login'; }}>
-                Find Universities
-              </Button>
-            </div>
-          </div>
-        </Container>
-      </div>
+      {/* Render Mobile Menu Panel in a Portal */}
+      {typeof document !== 'undefined' && createPortal(mobileMenuContent, document.body)}
     </header>
   );
 };

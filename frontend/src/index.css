@@ -80,6 +80,12 @@
   body {
     @apply bg-background text-foreground;
   }
+  .landing-page {
+    --spacing-container: 2rem;
+    --spacing-section: 6rem;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
   .landing-page h1,
   .landing-page h2,
   .landing-page h3,

@@ -3,7 +3,7 @@ import { destinations } from '../../data/homepageData';
 
 export const Destinations = () => {
   return (
-    <section id="destinations" className="py-20 bg-bg-base border-t border-border-subtle overflow-hidden flex flex-col items-center">
+    <section id="destinations" className="py-20 scroll-mt-20 bg-bg-base border-t border-border-subtle overflow-hidden flex flex-col items-center">
       <Container className="mb-10 text-center">
         <h2 className="text-lg font-medium text-text-secondary uppercase tracking-widest">
           Explore Selected Destinations

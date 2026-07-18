@@ -91,7 +91,7 @@ export const StudentJourney = () => {
   }, { scope: containerRef });
 
   return (
-    <section id="journey" ref={containerRef} className="py-24 lg:py-32 bg-bg-base border-t border-border-subtle">
+    <section id="journey" ref={containerRef} className="py-24 lg:py-32 scroll-mt-20 bg-bg-base border-t border-border-subtle">
       <Container>
         <div ref={headingRef}>
           <SectionHeading

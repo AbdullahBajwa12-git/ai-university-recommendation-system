@@ -40,7 +40,7 @@ export const RecommendationExperience = () => {
   }, { scope: containerRef });
 
   return (
-    <section id="experience" ref={containerRef} className="py-24 lg:py-32 relative border-t border-border-subtle">
+    <section id="experience" ref={containerRef} className="py-24 lg:py-32 scroll-mt-20 relative border-t border-border-subtle">
       <Container>
         <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
 
