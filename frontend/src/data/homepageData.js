@@ -1,20 +1,20 @@
 export const howItWorksSteps = [
   {
     number: '01',
-    title: 'Share Your Profile',
-    description: 'Enter your academic background, interests, and budget preferences securely.',
+    title: 'Create Your Profile',
+    description: 'Add your academic background, study interests, preferred countries, and budget.',
     icon: 'profile'
   },
   {
     number: '02',
-    title: 'Explore Suitable Options',
-    description: 'Discover curated universities matched to your unique profile by AI assistance.',
+    title: 'Discover Best-Fit Options',
+    description: 'Review universities and programs matched to your profile and preferences.',
     icon: 'explore'
   },
   {
     number: '03',
-    title: 'Review Clear Guidance',
-    description: 'Get actionable insights on entry requirements to support your decision-making.',
+    title: 'Compare Your Options',
+    description: 'Understand match factors, entry requirements, and important details before deciding.',
     icon: 'guidance'
   }
 ];
@@ -32,20 +32,20 @@ export const destinations = [
 
 export const journeyStages = [
   {
-    title: 'AI Profiling',
-    description: 'Our system analyzes your academic history, test scores, and budget to build a complete persona.'
+    title: 'Build Your Profile',
+    description: 'Add your academic history, study interests, preferred destinations, and budget.'
   },
   {
-    title: 'Smart Matching',
-    description: 'Advanced algorithms instantly filter global universities, matching you with high-probability targets.'
+    title: 'Generate Your Shortlist',
+    description: 'StudyRoute filters available universities and programs using your selected criteria.'
   },
   {
-    title: 'Data Insights',
-    description: 'Unlock transparent admission probabilities, safe/reach evaluations, and cost breakdowns.'
+    title: 'Compare Key Details',
+    description: 'Review match factors, entry requirements, programs, and important university information.'
   },
   {
-    title: 'Future Secured',
-    description: 'Confidently route your application to official channels backed by data-driven certainty.'
+    title: 'Apply With Confidence',
+    description: 'Use your shortlist to research official requirements and plan your next steps.'
   }
 ];
 

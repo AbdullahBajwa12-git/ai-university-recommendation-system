@@ -14,21 +14,21 @@ export const Footer = () => {
               alt="StudyRoute"
               className="w-[140px] h-auto mb-6 object-contain"
             />
-            <p className="text-sm leading-relaxed mb-6 text-white/90">
-              AI-assisted university discovery and admission-guidance platform.
+            <p className="text-[15px] font-normal leading-relaxed mb-6 text-white/90">
+              Personalized university discovery and study-abroad guidance.
             </p>
           </div>
 
           {/* Links Columns */}
           {footerLinks.map((column, index) => (
             <div key={index}>
-              <h4 className="text-white text-lg mb-4">{column.title}</h4>
+              <h4 className="text-white text-[16px] font-bold mb-4">{column.title}</h4>
               <ul className="space-y-3">
                 {column.links.map((link, linkIndex) => (
                   <li key={linkIndex}>
                     <a
                       href={link.href}
-                      className="text-sm text-white/90 hover:text-white hover:opacity-80 transition-opacity outline-none-focus rounded"
+                      className="text-[14px] lg:text-[15px] font-normal leading-[1.8] text-white/90 hover:text-white transition-opacity outline-none-focus rounded"
                     >
                       {link.label}
                     </a>
@@ -39,8 +39,7 @@ export const Footer = () => {
           ))}
         </div>
 
-        {/* Bottom Bar */}
-        <div className="pt-8 border-t border-white/20 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-white/90">
+        <div className="pt-8 border-t border-white/20 flex flex-col md:flex-row justify-between items-center gap-4 text-[13px] lg:text-[14px] font-normal text-white/70">
           <p>&copy; {new Date().getFullYear()} StudyRoute. All rights reserved.</p>
           <p className="text-center md:text-right">
             University information should be verified through official sources.

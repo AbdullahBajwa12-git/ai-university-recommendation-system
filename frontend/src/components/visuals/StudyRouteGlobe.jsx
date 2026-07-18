@@ -145,8 +145,8 @@ export const StudyRouteGlobe = ({ isMobile }) => {
         <div
           className="globe-study-label absolute bottom-[calc(100%+16px)] lg:bottom-[calc(100%+24px)] left-1/2 -translate-x-1/2 whitespace-nowrap pointer-events-none"
         >
-          <h2 className="text-[16px] sm:text-[18px] lg:text-[20px] font-bold text-white tracking-tight drop-shadow-sm">
-            Let’s Study Abroad!
+          <h2 className="text-[20px] lg:text-[26px] font-editorial font-semibold text-white leading-[1.15] tracking-tight drop-shadow-sm">
+            Your Study Journey Starts Here
           </h2>
         </div>
       </div>

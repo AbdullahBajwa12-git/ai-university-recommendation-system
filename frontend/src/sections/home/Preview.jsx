@@ -111,8 +111,8 @@ export const Preview = () => {
         <div className="flex flex-col items-center text-center mb-8">
 
           <SectionHeading
-            title="How StudyRoute AI Works"
-            description="A seamless, intelligent journey from profile creation to securing your dream university."
+            title="How StudyRoute Finds Your Best-Fit Universities"
+            description="Three clear steps from profile setup to informed university decisions."
           />
         </div>
 
@@ -123,7 +123,7 @@ export const Preview = () => {
           </div>
 
           {howItWorksSteps.map((step, index) => (
-            <div key={index} className="step-card relative flex flex-col items-center text-center group p-8 lg:p-10 transition-all duration-500 hover:shadow-[0_15px_40px_-5px_rgba(var(--color-landing-accent),0.3)] hover:-translate-y-2 hover:scale-[1.02] z-10 rounded-2xl">
+            <div key={index} className="step-card relative flex flex-col items-center text-center group p-[36px] lg:p-[40px] transition-all duration-500 hover:shadow-[0_15px_40px_-5px_rgba(var(--color-landing-accent),0.3)] hover:-translate-y-2 hover:scale-[1.02] z-10 rounded-2xl">
 
               {/* Colorful gradient border (permanent) */}
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-landing-accent to-dest-1 pointer-events-none -z-20" style={{ padding: '2px' }}>
@@ -131,12 +131,12 @@ export const Preview = () => {
               </div>
 
               {/* Number Badge (Animated) */}
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-bg-base to-bg-surface border border-border-subtle flex items-center justify-center text-text-primary font-editorial text-3xl mb-8 shadow-sm relative z-10 transition-all duration-500 group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-landing-accent group-hover:to-dest-1 group-hover:text-white group-hover:border-transparent group-hover:shadow-[0_10px_25px_-5px_rgba(var(--color-landing-accent),0.5)]">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-bg-base to-bg-surface border border-border-subtle flex items-center justify-center text-text-primary text-[18px] font-bold mb-8 shadow-sm relative z-10 transition-all duration-500 group-hover:scale-110 group-hover:bg-gradient-to-br group-hover:from-landing-accent group-hover:to-dest-1 group-hover:text-white group-hover:border-transparent group-hover:shadow-[0_10px_25px_-5px_rgba(var(--color-landing-accent),0.5)]">
                 <span className="relative z-10 font-bold">{step.number}</span>
               </div>
 
-              <h3 className="text-xl font-bold mb-4 bg-gradient-to-r from-landing-accent to-dest-1 bg-clip-text text-transparent relative z-10">{step.title}</h3>
-              <p className="text-text-secondary leading-relaxed mb-10 relative z-10">
+              <h3 className="text-[21px] font-bold mb-4 bg-gradient-to-r from-landing-accent to-dest-1 bg-clip-text text-transparent relative z-10">{step.title}</h3>
+              <p className="text-[15px] font-normal leading-[1.6] text-text-secondary mb-10 relative z-10">
                 {step.description}
               </p>
 

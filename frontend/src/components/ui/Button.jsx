@@ -7,7 +7,7 @@ export const Button = React.forwardRef(({
   className = '',
   ...props
 }, ref) => {
-  const baseStyles = "inline-flex items-center justify-center font-medium transition-all duration-300 outline-none-focus rounded-full";
+  const baseStyles = "inline-flex items-center justify-center font-bold transition-all duration-300 outline-none-focus rounded-[14px]";
 
   const variants = {
     primary: "bg-gradient-to-r from-landing-accent via-dest-1 to-landing-accent animate-gradient-shift text-white shadow-lg shadow-landing-accent/30 transform hover:-translate-y-1 hover:shadow-xl hover:shadow-landing-accent/40 border-none",
@@ -16,9 +16,9 @@ export const Button = React.forwardRef(({
   };
 
   const sizes = {
-    sm: "px-4 py-2 text-sm",
-    md: "px-6 py-3 text-base",
-    lg: "px-8 py-4 text-lg"
+    sm: "px-4 h-10 text-sm",
+    md: "px-[30px] h-[54px] text-[16px]",
+    lg: "px-[30px] h-[54px] text-[16px]"
   };
 
   return (

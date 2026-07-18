@@ -114,7 +114,7 @@ export const Hero = () => {
   }, { scope: containerRef });
 
   return (
-    <section id="home" ref={containerRef} className="relative min-h-[100svh] flex flex-col justify-center pt-28 pb-12 lg:pt-28 lg:pb-16 overflow-hidden bg-[url('/images/hero-bg.png')] bg-cover bg-center bg-fixed">
+    <section id="home" ref={containerRef} className="relative min-h-[100svh] flex flex-col justify-center pt-28 pb-12 lg:pt-28 lg:pb-16 overflow-hidden bg-[url('/images/Image_2.jpg')] bg-cover bg-center bg-fixed">
       {/* Dark Overlay for readability */}
       <div className="absolute inset-0 bg-slate-900/60 z-0"></div>
 
@@ -126,19 +126,18 @@ export const Hero = () => {
         {/* Content Side */}
         <div className="flex flex-col items-start w-full max-w-2xl mx-auto lg:mx-0">
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-editorial font-bold text-white leading-[1.05] tracking-tight mb-5 text-balance perspective-[1000px] drop-shadow-md">
-            <div className="hero-heading-line origin-bottom">Find the right</div>
-            <div className="hero-heading-line origin-bottom">university path</div>
-            <div className="hero-heading-line origin-bottom text-white/90">for your future.</div>
+          <h1 className="text-[42px] sm:text-[46px] lg:text-[72px] font-editorial font-semibold text-white leading-[1] lg:leading-[0.98] tracking-[-0.035em] mb-5 max-w-[620px] text-balance perspective-[1000px] drop-shadow-md">
+            <div className="hero-heading-line origin-bottom">Find the University</div>
+            <div className="hero-heading-line origin-bottom text-white/90">That Fits Your Future.</div>
           </h1>
 
-          <p className="hero-paragraph text-base sm:text-lg md:text-xl text-white font-bold mb-8 max-w-xl text-balance leading-relaxed drop-shadow-sm">
-            Explore curated study destinations and receive guidance based on your academic profile, goals and preferences.
+          <p className="hero-paragraph text-[16px] lg:text-[18px] text-white font-normal mb-8 max-w-[580px] text-balance leading-[1.65] drop-shadow-sm">
+            Build your profile once and discover universities, programs, and study destinations matched to your goals.
           </p>
 
           <div className="flex flex-wrap gap-4 mb-4 lg:mb-0">
             <Button variant="primary" size="lg" className="hero-cta" onClick={() => window.location.href = '/register'}>
-              Start Exploring
+              Find My Universities
             </Button>
             <Button variant="secondary" size="lg" className="hero-cta" onClick={() => { document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' }); }}>
               See How It Works

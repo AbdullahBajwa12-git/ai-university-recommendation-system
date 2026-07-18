@@ -15,20 +15,20 @@ export const FinalCTA = () => {
         <div className="w-[800px] h-[400px] bg-landing-accent/5 rounded-full blur-[100px]" />
       </div>
 
-      <Container className="relative z-10 text-center max-w-3xl mx-auto">
-        <h2 className="text-4xl md:text-5xl lg:text-6xl font-editorial mb-6 text-balance">
-          Your university search deserves a clearer route.
+      <Container className="relative z-10 text-center max-w-[900px] mx-auto">
+        <h2 className="text-[36px] lg:text-[52px] font-editorial font-semibold leading-[1.1] lg:leading-[1.08] mb-6 text-balance tracking-[-0.025em]">
+          Make Your Next University Decision Clearer.
         </h2>
-        <p className="text-lg md:text-xl text-text-secondary mb-10 text-balance leading-relaxed">
-          Build your profile, explore suitable options and review guidance designed around your goals.
+        <p className="text-[16px] lg:text-[18px] text-text-secondary mb-10 text-balance leading-[1.6]">
+          Create your profile, explore suitable universities, and compare options based on what matters to you.
         </p>
 
         <div className="flex flex-wrap justify-center gap-4">
           <Button variant="primary" size="lg">
-            Start Your Journey
+            Create My Profile
           </Button>
           <Button variant="secondary" size="lg">
-            Explore How It Works
+            See How It Works
           </Button>
         </div>
       </Container>

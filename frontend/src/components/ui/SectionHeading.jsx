@@ -13,12 +13,12 @@ export const SectionHeading = forwardRef(({
   };
 
   return (
-    <div ref={ref} className={`max-w-2xl mb-12 lg:mb-16 ${alignmentClasses[alignment]} ${className}`}>
-      <h2 className="text-3xl md:text-4xl lg:text-5xl font-editorial mb-4 lg:mb-6 text-balance">
+    <div ref={ref} className={`max-w-[760px] mb-12 lg:mb-16 ${alignmentClasses[alignment]} ${className}`}>
+      <h2 className="text-[32px] sm:text-[36px] lg:text-[48px] font-editorial font-semibold leading-[1.1] lg:leading-[1.08] tracking-[-0.025em] mb-4 lg:mb-6 text-balance">
         {title}
       </h2>
       {description && (
-        <p className="text-base sm:text-lg text-text-secondary text-balance leading-relaxed">
+        <p className="text-[16px] lg:text-[18px] text-text-secondary font-normal text-balance leading-[1.6]">
           {description}
         </p>
       )}

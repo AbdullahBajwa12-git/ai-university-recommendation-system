@@ -66,6 +66,7 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        'landing-sans': ['Manrope', 'system-ui', 'sans-serif'],
         editorial: ['Newsreader', 'Georgia', 'serif'],
       },
       spacing: {

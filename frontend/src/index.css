@@ -85,6 +85,7 @@
     --spacing-section: 6rem;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-family: theme('fontFamily.landing-sans');
   }
   .landing-page h1,
   .landing-page h2,
@@ -93,8 +94,7 @@
   .landing-page h5,
   .landing-page h6 {
     font-family: theme('fontFamily.editorial');
-    font-weight: 400;
-    letter-spacing: -0.02em;
+    font-weight: 600;
   }
 }
 

@@ -109,8 +109,8 @@ export const ResponsibleGuidance = () => {
           <div className="w-full lg:w-2/3 text-center lg:text-left">
 
             <SectionHeading
-              title="Ethical AI & Transparent Guidance"
-              description="At StudyRoute, we believe your education decisions should be built on clarity, verified data, and absolute transparency. Our AI acts as a smart compass, empowering you without making false promises."
+              title="Responsible AI. Transparent Guidance."
+              description="StudyRoute supports better education decisions through verified information, explainable recommendations, and honest guidance. Final admission decisions always remain with the university."
               alignment="left"
               className="mb-0 max-w-full"
             />
@@ -121,66 +121,66 @@ export const ResponsibleGuidance = () => {
         <div className="grid md:grid-cols-2 gap-6 lg:gap-8">
 
           {/* Card 1 */}
-          <div className="guidance-card relative p-8 rounded-2xl group transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_10px_30px_-10px_rgba(var(--color-landing-accent),0.3)] z-10">
+          <div className="guidance-card relative p-[32px] rounded-2xl group transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_10px_30px_-10px_rgba(var(--color-landing-accent),0.3)] z-10">
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-landing-accent to-dest-1 pointer-events-none -z-20" style={{ padding: '1px' }}>
               <div className="w-full h-full bg-bg-surface rounded-2xl" />
             </div>
-            <h4 className="text-text-primary font-medium text-lg mb-4 flex items-center relative z-10">
+            <h4 className="text-text-primary font-bold text-[20px] mb-[14px] flex items-center relative z-10">
               <span className="w-10 h-10 rounded bg-landing-accent/10 text-landing-accent flex items-center justify-center mr-4">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               </span>
-              Source-Backed Information
+              Verified University Information
             </h4>
-            <p className="text-sm md:text-base text-text-secondary leading-relaxed lg:pl-14 relative z-10">
-              Our models process data directly curated from official university sources. While we strive for extreme accuracy, institutional policies evolve, so official websites should always be your final checkpoint.
+            <p className="text-[15px] lg:text-[16px] text-text-secondary leading-[1.6] lg:pl-14 relative z-10 font-normal">
+              Recommendations are based on structured university and program data. Students should always confirm final requirements through official university sources.
             </p>
           </div>
 
           {/* Card 2 */}
-          <div className="guidance-card relative p-8 rounded-2xl group transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_10px_30px_-10px_rgba(var(--color-dest-1),0.3)] z-10">
+          <div className="guidance-card relative p-[32px] rounded-2xl group transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_10px_30px_-10px_rgba(var(--color-dest-1),0.3)] z-10">
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-landing-accent to-dest-1 pointer-events-none -z-20" style={{ padding: '1px' }}>
               <div className="w-full h-full bg-bg-surface rounded-2xl" />
             </div>
-            <h4 className="text-text-primary font-medium text-lg mb-4 flex items-center relative z-10">
+            <h4 className="text-text-primary font-bold text-[20px] mb-[14px] flex items-center relative z-10">
               <span className="w-10 h-10 rounded bg-dest-1/10 text-dest-1 flex items-center justify-center mr-4">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               </span>
-              No False Guarantees
+              Honest, Evidence-Based Guidance
             </h4>
-            <p className="text-sm md:text-base text-text-secondary leading-relaxed lg:pl-14 relative z-10">
-              We provide data-driven admission probabilities rather than false certainties. Real admissions depend on holistic institutional reviews, and we do not act as a final admission authority or guarantee visas.
+            <p className="text-[15px] lg:text-[16px] text-text-secondary leading-[1.6] lg:pl-14 relative z-10 font-normal">
+              StudyRoute explains potential suitability but does not guarantee admission, scholarships, visas, or application outcomes.
             </p>
           </div>
 
           {/* Card 3 */}
-          <div className="guidance-card relative p-8 rounded-2xl group transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_10px_30px_-10px_rgba(var(--color-dest-2),0.3)] z-10">
+          <div className="guidance-card relative p-[32px] rounded-2xl group transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_10px_30px_-10px_rgba(var(--color-dest-2),0.3)] z-10">
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-landing-accent to-dest-1 pointer-events-none -z-20" style={{ padding: '1px' }}>
               <div className="w-full h-full bg-bg-surface rounded-2xl" />
             </div>
-            <h4 className="text-text-primary font-medium text-lg mb-4 flex items-center relative z-10">
+            <h4 className="text-text-primary font-bold text-[20px] mb-[14px] flex items-center relative z-10">
               <span className="w-10 h-10 rounded bg-dest-2/10 text-dest-2 flex items-center justify-center mr-4">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
               </span>
-              Data Privacy & Security
+              Privacy by Design
             </h4>
-            <p className="text-sm md:text-base text-text-secondary leading-relaxed lg:pl-14 relative z-10">
-              Your academic background and budget preferences are securely encrypted. We only process your data to generate accurate university matches and never sell it to unauthorized third parties.
+            <p className="text-[15px] lg:text-[16px] text-text-secondary leading-[1.6] lg:pl-14 relative z-10 font-normal">
+              Your profile information is used to generate recommendations and support your account experience. It is not presented as public information.
             </p>
           </div>
 
           {/* Card 4 */}
-          <div className="guidance-card relative p-8 rounded-2xl group transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_10px_30px_-10px_rgba(var(--color-landing-accent),0.3)] z-10">
+          <div className="guidance-card relative p-[32px] rounded-2xl group transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_10px_30px_-10px_rgba(var(--color-landing-accent),0.3)] z-10">
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-landing-accent to-dest-1 pointer-events-none -z-20" style={{ padding: '1px' }}>
               <div className="w-full h-full bg-bg-surface rounded-2xl" />
             </div>
-            <h4 className="text-text-primary font-medium text-lg mb-4 flex items-center relative z-10">
+            <h4 className="text-text-primary font-bold text-[20px] mb-[14px] flex items-center relative z-10">
               <span className="w-10 h-10 rounded bg-landing-accent/10 text-landing-accent flex items-center justify-center mr-4">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>
+                <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" /></svg>
               </span>
-              Unbiased Matching
+              Fair and Relevant Matching
             </h4>
-            <p className="text-sm md:text-base text-text-secondary leading-relaxed lg:pl-14 relative z-10">
-              Our algorithm is continuously monitored to prevent biased recommendations. We ensure that your StudyRoute matches are based purely on your merit, requirements, and objective institutional criteria.
+            <p className="text-[15px] lg:text-[16px] text-text-secondary leading-[1.6] lg:pl-14 relative z-10 font-normal">
+              Recommendations focus on the academic and personal preferences provided in your profile, rather than paid university placement.
             </p>
           </div>
 

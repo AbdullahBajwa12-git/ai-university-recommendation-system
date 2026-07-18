@@ -69,16 +69,16 @@ export const StudentJourney = () => {
     <section id="journey" ref={containerRef} className="py-24 lg:py-32 scroll-mt-20 border-t border-border-subtle overflow-hidden relative bg-[url('/images/journey-bg.jpg')] bg-cover bg-center bg-fixed">
 
       {/* Elegant Overlay */}
-      <div className="absolute inset-0 bg-bg-base/80 backdrop-blur-[2px] z-0"></div>
+      <div className="absolute inset-0 z-0" style={{ backgroundColor: 'rgba(8, 15, 25, 0.58)' }}></div>
 
       <Container className="relative z-10">
 
         <div className="flex flex-col items-center text-center mb-16 lg:mb-24 relative z-10">
 
           <SectionHeading
-            title="The Smart Student Journey"
-            description="Experience a data-driven, zig-zag pathway from initial profiling to securing your future."
-            className="mb-0 [&>h2]:text-blue-950 [&>p]:text-blue-900 font-medium"
+            title="From Profile to University Shortlist"
+            description="A clear, guided process designed to turn your preferences into practical university options."
+            className="mb-0 [&>h2]:text-white [&>p]:text-white/90"
           />
         </div>
 
@@ -112,13 +112,13 @@ export const StudentJourney = () => {
               const isEven = index % 2 !== 0; // 0=top, 1=bottom, 2=top, 3=bottom
               return (
                 <div key={index} className={`journey-node flex flex-col items-center text-center px-4 ${isEven ? 'lg:mt-[120px]' : ''}`}>
-                  <div className="journey-step-circle w-14 h-14 rounded-full bg-bg-surface border-2 border-landing-accent/50 flex items-center justify-center text-landing-accent font-bold text-xl mb-6 shadow-[0_0_15px_rgba(var(--color-landing-accent),0.2)] glass relative">
-                    <span className="relative z-10">{index + 1}</span>
+                  <div className="journey-step-circle w-14 h-14 rounded-full bg-bg-surface border-2 border-landing-accent/50 flex items-center justify-center text-landing-accent mb-6 shadow-[0_0_15px_rgba(var(--color-landing-accent),0.2)] glass relative">
+                    <span className="relative z-10 font-[800] text-[14px]">{index + 1}</span>
                     <div className="absolute inset-0 rounded-full bg-landing-accent/10 pointer-events-none" />
                   </div>
-                  <div className="bg-bg-surface/60 glass p-5 rounded-2xl border border-border-subtle w-full h-full hover:border-landing-accent/50 transition-colors">
-                    <h3 className="text-xl font-medium text-text-primary mb-3">{stage.title}</h3>
-                    <p className="text-text-secondary text-sm leading-relaxed">
+                  <div className="p-5 rounded-2xl border border-border-subtle w-full h-full hover:border-landing-accent/50 transition-colors" style={{ background: 'rgba(255, 255, 255, 0.92)', backdropFilter: 'blur(10px)' }}>
+                    <h3 className="text-[20px] font-bold text-text-primary mb-3">{stage.title}</h3>
+                    <p className="text-text-secondary text-[15px] font-normal leading-[1.6]">
                       {stage.description}
                     </p>
                   </div>
