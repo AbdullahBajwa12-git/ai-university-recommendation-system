@@ -25,7 +25,11 @@ export const Destinations = () => {
           <div className="flex gap-8 md:gap-16 px-4 md:px-8 items-center">
             {destinations.map((dest, i) => (
               <div key={`dest-1-${i}`} className="flex items-center gap-3 flex-none whitespace-nowrap">
-                <span className={`w-3 h-3 rounded-full flex-none ${dest.color}`} aria-hidden="true" />
+                {dest.flag ? (
+                  <img src={dest.flag} alt={`${dest.name} flag`} className="w-[1.25em] h-[1em] object-cover rounded-sm flex-none text-3xl md:text-5xl" />
+                ) : (
+                  <span className={`w-3 h-3 rounded-full flex-none ${dest.color}`} aria-hidden="true" />
+                )}
                 <span className="text-3xl md:text-5xl font-editorial font-medium text-text-primary opacity-80 hover:opacity-100 transition-opacity cursor-default">
                   {dest.shortName ? (
                     <>
@@ -44,7 +48,11 @@ export const Destinations = () => {
           <div className="flex gap-8 md:gap-16 px-4 md:px-8 items-center" aria-hidden="true">
             {destinations.map((dest, i) => (
               <div key={`dest-2-${i}`} className="flex items-center gap-3 flex-none whitespace-nowrap">
-                <span className={`w-3 h-3 rounded-full flex-none ${dest.color}`} />
+                {dest.flag ? (
+                  <img src={dest.flag} alt={`${dest.name} flag`} className="w-[1.25em] h-[1em] object-cover rounded-sm flex-none text-3xl md:text-5xl" />
+                ) : (
+                  <span className={`w-3 h-3 rounded-full flex-none ${dest.color}`} />
+                )}
                 <span className="text-3xl md:text-5xl font-editorial font-medium text-text-primary opacity-80 hover:opacity-100 transition-opacity cursor-default">
                   {dest.shortName || dest.name}
                 </span>

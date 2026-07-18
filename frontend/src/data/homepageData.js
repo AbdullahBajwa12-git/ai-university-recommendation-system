@@ -20,32 +20,32 @@ export const howItWorksSteps = [
 ];
 
 export const destinations = [
-  { name: 'United Kingdom', shortName: 'UK', color: 'bg-dest-1' },
-  { name: 'Canada', color: 'bg-dest-2' },
-  { name: 'Germany', color: 'bg-landing-accent' },
-  { name: 'Australia', color: 'bg-dest-3' },
-  { name: 'United States', shortName: 'USA', color: 'bg-dest-1' },
-  { name: 'Malaysia', color: 'bg-dest-2' },
-  { name: 'Turkey', color: 'bg-landing-accent' },
-  { name: 'United Arab Emirates', shortName: 'UAE', color: 'bg-dest-3' }
+  { name: 'United Kingdom', shortName: 'UK', color: 'bg-dest-1', flag: '/flags/gb.svg' },
+  { name: 'Canada', color: 'bg-dest-2', flag: '/flags/ca.svg' },
+  { name: 'Germany', color: 'bg-landing-accent', flag: '/flags/de.svg' },
+  { name: 'Australia', color: 'bg-dest-3', flag: '/flags/au.svg' },
+  { name: 'United States', shortName: 'USA', color: 'bg-dest-1', flag: '/flags/us.svg' },
+  { name: 'Malaysia', color: 'bg-dest-2', flag: '/flags/my.svg' },
+  { name: 'Turkey', color: 'bg-landing-accent', flag: '/flags/tr.svg' },
+  { name: 'United Arab Emirates', shortName: 'UAE', color: 'bg-dest-3', flag: '/flags/ae.svg' }
 ];
 
 export const journeyStages = [
   {
-    title: 'Discover',
-    description: 'Explore verified study destinations and institutions matching your profile.'
+    title: 'AI Profiling',
+    description: 'Our system analyzes your academic history, test scores, and budget to build a complete persona.'
   },
   {
-    title: 'Shortlist',
-    description: 'Compare curated options side-by-side using AI-assisted insights.'
+    title: 'Smart Matching',
+    description: 'Advanced algorithms instantly filter global universities, matching you with high-probability targets.'
   },
   {
-    title: 'Understand',
-    description: 'Review clear guidance on requirements and estimate your suitability.'
+    title: 'Data Insights',
+    description: 'Unlock transparent admission probabilities, safe/reach evaluations, and cost breakdowns.'
   },
   {
-    title: 'Decide',
-    description: 'Make informed choices and proceed to official channels with confidence.'
+    title: 'Future Secured',
+    description: 'Confidently route your application to official channels backed by data-driven certainty.'
   }
 ];
 

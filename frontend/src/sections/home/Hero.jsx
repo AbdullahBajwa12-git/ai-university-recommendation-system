@@ -114,26 +114,25 @@ export const Hero = () => {
   }, { scope: containerRef });
 
   return (
-    <section id="home" ref={containerRef} className="relative min-h-[100svh] flex flex-col justify-center pt-28 pb-12 lg:pt-28 lg:pb-16 overflow-hidden">
+    <section id="home" ref={containerRef} className="relative min-h-[100svh] flex flex-col justify-center pt-28 pb-12 lg:pt-28 lg:pb-16 overflow-hidden bg-[url('/images/hero-bg.png')] bg-cover bg-center bg-fixed">
+      {/* Dark Overlay for readability */}
+      <div className="absolute inset-0 bg-slate-900/60 z-0"></div>
+
       {/* Abstract Background Gradient */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-landing-accent/5 rounded-full blur-[120px] -z-10 pointer-events-none" aria-hidden="true" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-landing-accent/10 rounded-full blur-[120px] z-0 pointer-events-none" aria-hidden="true" />
 
       <Container className="grid lg:grid-cols-2 gap-10 lg:gap-8 items-center z-10">
 
         {/* Content Side */}
         <div className="flex flex-col items-start w-full max-w-2xl mx-auto lg:mx-0">
-          <div className="hero-eyebrow inline-flex items-center space-x-2 px-3 py-1 rounded-full border border-border-subtle bg-bg-surface text-landing-accent text-sm font-medium mb-5 lg:mb-6">
-            <span className="w-2 h-2 rounded-full bg-landing-accent animate-pulse" aria-hidden="true" />
-            <span>AI-assisted university discovery</span>
-          </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-editorial font-medium leading-[1.05] tracking-tight mb-5 text-balance perspective-[1000px]">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-editorial font-bold text-white leading-[1.05] tracking-tight mb-5 text-balance perspective-[1000px] drop-shadow-md">
             <div className="hero-heading-line origin-bottom">Find the right</div>
             <div className="hero-heading-line origin-bottom">university path</div>
-            <div className="hero-heading-line origin-bottom text-text-secondary">for your future.</div>
+            <div className="hero-heading-line origin-bottom text-white/90">for your future.</div>
           </h1>
 
-          <p className="hero-paragraph text-base sm:text-lg md:text-xl text-text-secondary mb-8 max-w-xl text-balance leading-relaxed">
+          <p className="hero-paragraph text-base sm:text-lg md:text-xl text-white font-bold mb-8 max-w-xl text-balance leading-relaxed drop-shadow-sm">
             Explore curated study destinations and receive guidance based on your academic profile, goals and preferences.
           </p>
 

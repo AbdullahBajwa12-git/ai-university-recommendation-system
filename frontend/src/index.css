@@ -25,29 +25,29 @@
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
     
-    /* Landing Page Variables */
-    --color-bg-base: #0f1115;
-    --color-bg-surface: #16181d;
-    --color-bg-surface-hover: #1f2229;
-    --color-text-primary: #f8f6f0;
-    --color-text-secondary: #a1a1aa;
-    --color-text-inverse: #0f1115;
-    --color-landing-accent: #d4af37;
-    --color-landing-accent-hover: #bda038;
-    --color-border-subtle: rgba(255, 255, 255, 0.08);
-    --color-border-focus: rgba(212, 175, 55, 0.5);
-    --color-globe-surface: rgba(22, 24, 29, 0.8);
-    --color-globe-grid: rgba(255, 255, 255, 0.05);
-    --color-map-land: rgba(255, 255, 255, 0.1);
-    --color-map-border: rgba(255, 255, 255, 0.15);
+    /* Landing Page Variables - Horizon Bloom Palette */
+    --color-bg-base: #FBFAF7;
+    --color-bg-surface: #FFFFFF;
+    --color-bg-surface-hover: #F2EEFF;
+    --color-text-primary: #0F2A3D;
+    --color-text-secondary: #2D3748;
+    --color-text-inverse: #FBFAF7;
+    --color-landing-accent: #2F5BEA;
+    --color-landing-accent-hover: #1e45c4;
+    --color-border-subtle: rgba(15, 42, 61, 0.1);
+    --color-border-focus: rgba(47, 91, 234, 0.5);
+    --color-globe-surface: rgba(251, 250, 247, 0.8);
+    --color-globe-grid: rgba(15, 42, 61, 0.05);
+    --color-map-land: rgba(15, 42, 61, 0.1);
+    --color-map-border: rgba(15, 42, 61, 0.15);
     --color-pakistan-highlight: var(--color-landing-accent);
-    --color-globe-route-smoke: rgba(255, 255, 255, 0.08);
-    --color-globe-route-vapor: rgba(255, 255, 255, 0.25);
-    --color-globe-route-highlight: rgba(255, 255, 255, 0.15);
-    --color-globe-origin-glow: rgba(212, 175, 55, 0.25);
-    --color-dest-1: #60a5fa;
-    --color-dest-2: #34d399;
-    --color-dest-3: #fb7185;
+    --color-globe-route-smoke: rgba(15, 42, 61, 0.08);
+    --color-globe-route-vapor: rgba(15, 42, 61, 0.25);
+    --color-globe-route-highlight: rgba(15, 42, 61, 0.15);
+    --color-globe-origin-glow: rgba(47, 91, 234, 0.25);
+    --color-dest-1: #2CB5A0;
+    --color-dest-2: #F6B73C;
+    --color-dest-3: #C63C8C;
   }
 
   .dark {
@@ -142,6 +142,10 @@
   .animate-pulse-slow {
     animation: pulse-slow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
+  .animate-gradient-shift {
+    animation: gradient-shift 3s ease infinite;
+    background-size: 200% 200%;
+  }
 }
 
 @keyframes marquee {
@@ -155,4 +159,9 @@
 @keyframes pulse-slow {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.6; transform: scale(1.1); }
+}
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }

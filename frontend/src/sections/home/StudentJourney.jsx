@@ -3,127 +3,130 @@ import { useGSAP } from '@gsap/react';
 import { gsap } from '../../animations/gsapSetup';
 import { Container } from '../../components/layout/Container';
 import { SectionHeading } from '../../components/ui/SectionHeading';
+import { SectionLabel } from '../../components/ui/SectionLabel';
 import { journeyStages } from '../../data/homepageData';
 
 export const StudentJourney = () => {
   const containerRef = useRef(null);
-  const headingRef = useRef(null);
   const wrapperRef = useRef(null);
-  const lineRef = useRef(null);
 
   useGSAP(() => {
     const mm = gsap.matchMedia();
 
     mm.add({
-      isDesktop: "(min-width: 1024px) and (prefers-reduced-motion: no-preference)",
-      isMobile: "(max-width: 1023px) and (prefers-reduced-motion: no-preference)",
+      isDesktop: "(min-width: 1024px)",
       isReduced: "(prefers-reduced-motion: reduce)"
     }, (context) => {
-      let { isDesktop, isMobile, isReduced } = context.conditions;
-
-      if (isReduced) {
-        gsap.set('.journey-stage', { opacity: 1, y: 0, clearProps: 'transform' });
-        gsap.set(headingRef.current, { opacity: 1, y: 0, clearProps: 'transform' });
-        if (lineRef.current) gsap.set(lineRef.current, { scaleX: 1, clearProps: 'transform' });
+      if (context.conditions.isReduced) {
+        gsap.set('.journey-node', { opacity: 1, y: 0, clearProps: 'transform' });
         return;
       }
-      
-      gsap.set('.journey-stage', { opacity: 0, y: isMobile ? 18 : 24 });
-      gsap.set(headingRef.current, { opacity: 0, y: 20 });
 
-      // 1. Heading Reveal
-      gsap.fromTo(headingRef.current,
-        { opacity: 0, y: 20 },
+      // Node entrance animations
+      gsap.fromTo('.journey-node',
+        { opacity: 0, y: 30 },
         {
           opacity: 1,
           y: 0,
           duration: 0.8,
-          ease: 'power2.out',
+          stagger: 0.2,
+          ease: 'power3.out',
           scrollTrigger: {
-            trigger: headingRef.current,
-            start: 'top 80%',
-            invalidateOnRefresh: true,
-            toggleActions: "play none none reverse"
+            trigger: wrapperRef.current,
+            start: 'top 75%'
           }
         }
       );
 
-      // 2. Journey Stages (Individual triggers)
-      const stages = gsap.utils.toArray('.journey-stage');
-      stages.forEach((stage) => {
-        gsap.fromTo(stage,
-          { opacity: 0, y: isMobile ? 18 : 24 },
+      if (context.conditions.isDesktop) {
+        // Continuous traveling light effect on the SVG zig zag path
+        gsap.fromTo('.journey-light',
+          { strokeDasharray: '40 600', strokeDashoffset: '640' },
           {
-            opacity: 1,
-            y: 0,
-            duration: isMobile ? 0.6 : 0.8,
-            ease: 'power2.out',
-            scrollTrigger: {
-              trigger: stage,
-              start: isMobile ? 'top 86%' : 'top 78%',
-              invalidateOnRefresh: true,
-              toggleActions: "play none none reverse"
-            }
+            strokeDashoffset: '0',
+            duration: 3,
+            repeat: -1,
+            ease: 'linear'
           }
         );
-      });
 
-      // 3. Journey Progress Line (Desktop only)
-      if (isDesktop && lineRef.current) {
-        gsap.fromTo(lineRef.current,
-          { scaleX: 0 },
-          {
-            scaleX: 1,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: wrapperRef.current,
-              start: 'top 72%',
-              end: 'bottom 65%',
-              scrub: 1.5,
-              invalidateOnRefresh: true
-            }
-          }
-        );
+        // Glow pulse on the step circles
+        gsap.to('.journey-step-circle', {
+          boxShadow: '0 0 25px rgba(var(--color-landing-accent), 0.6)',
+          duration: 1.5,
+          repeat: -1,
+          yoyo: true,
+          ease: 'sine.inOut',
+          stagger: 0.4
+        });
       }
     });
-    
+
     return () => mm.revert();
   }, { scope: containerRef });
 
   return (
-    <section id="journey" ref={containerRef} className="py-24 lg:py-32 scroll-mt-20 bg-bg-base border-t border-border-subtle">
-      <Container>
-        <div ref={headingRef}>
+    <section id="journey" ref={containerRef} className="py-24 lg:py-32 scroll-mt-20 border-t border-border-subtle overflow-hidden relative bg-[url('/images/journey-bg.jpg')] bg-cover bg-center bg-fixed">
+
+      {/* Elegant Overlay */}
+      <div className="absolute inset-0 bg-bg-base/80 backdrop-blur-[2px] z-0"></div>
+
+      <Container className="relative z-10">
+
+        <div className="flex flex-col items-center text-center mb-16 lg:mb-24 relative z-10">
+
           <SectionHeading
-            title="The Student Journey"
-            description="A clear, logical pathway from initial discovery to making informed decisions about your future."
+            title="The Smart Student Journey"
+            description="Experience a data-driven, zig-zag pathway from initial profiling to securing your future."
+            className="mb-0 [&>h2]:text-blue-950 [&>p]:text-blue-900 font-medium"
           />
         </div>
 
-        <div ref={wrapperRef} className="relative mt-16 max-w-5xl mx-auto">
-          {/* Journey Line Base (Desktop only) */}
-          <div className="hidden lg:block absolute top-12 left-0 right-0 h-px bg-border-subtle" aria-hidden="true">
-            {/* Animated Progress Line */}
-            <div
-              ref={lineRef}
-              className="absolute top-0 left-0 h-full bg-landing-accent origin-left"
-              style={{ scaleX: 0 }}
-            />
+        <div ref={wrapperRef} className="relative max-w-6xl mx-auto">
+
+          {/* Zig-Zag SVG and Light Effect (Desktop Only) */}
+          <div className="hidden lg:block absolute top-[28px] left-[12.5%] right-[12.5%] h-[120px] pointer-events-none z-0">
+            <svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 300 100" className="overflow-visible text-border-subtle">
+              <defs>
+                <filter id="glow-light" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="3" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+                <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                  <polygon points="0 0, 8 3, 0 6" fill="currentColor" />
+                </marker>
+              </defs>
+
+              {/* Subtle Track with Arrows */}
+              <path d="M 0,0 C 30,0 70,100 100,100" fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" markerEnd="url(#arrowhead)" />
+              <path d="M 100,100 C 130,100 170,0 200,0" fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" markerEnd="url(#arrowhead)" />
+              <path d="M 200,0 C 230,0 270,100 300,100" fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" markerEnd="url(#arrowhead)" />
+
+              {/* Traveling Light Pulse */}
+              <path className="journey-light text-landing-accent" d="M 0,0 C 30,0 70,100 100,100 C 130,100 170,0 200,0 C 230,0 270,100 300,100" fill="none" stroke="currentColor" strokeWidth="3" vectorEffect="non-scaling-stroke" filter="url(#glow-light)" />
+            </svg>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4 relative">
-            {journeyStages.map((stage, index) => (
-              <div key={index} className="journey-stage flex flex-col items-center text-center px-4">
-                <div className="w-12 h-12 rounded-full bg-bg-surface border border-border-focus flex items-center justify-center text-landing-accent font-medium mb-6 relative z-10">
-                  {index + 1}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-0 relative z-10">
+            {journeyStages.map((stage, index) => {
+              const isEven = index % 2 !== 0; // 0=top, 1=bottom, 2=top, 3=bottom
+              return (
+                <div key={index} className={`journey-node flex flex-col items-center text-center px-4 ${isEven ? 'lg:mt-[120px]' : ''}`}>
+                  <div className="journey-step-circle w-14 h-14 rounded-full bg-bg-surface border-2 border-landing-accent/50 flex items-center justify-center text-landing-accent font-bold text-xl mb-6 shadow-[0_0_15px_rgba(var(--color-landing-accent),0.2)] glass relative">
+                    <span className="relative z-10">{index + 1}</span>
+                    <div className="absolute inset-0 rounded-full bg-landing-accent/10 pointer-events-none" />
+                  </div>
+                  <div className="bg-bg-surface/60 glass p-5 rounded-2xl border border-border-subtle w-full h-full hover:border-landing-accent/50 transition-colors">
+                    <h3 className="text-xl font-medium text-text-primary mb-3">{stage.title}</h3>
+                    <p className="text-text-secondary text-sm leading-relaxed">
+                      {stage.description}
+                    </p>
+                  </div>
                 </div>
-                <h3 className="text-xl font-editorial mb-3 text-text-primary">{stage.title}</h3>
-                <p className="text-text-secondary text-sm leading-relaxed">
-                  {stage.description}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
+
         </div>
       </Container>
     </section>

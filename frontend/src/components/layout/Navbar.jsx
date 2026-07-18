@@ -5,6 +5,7 @@ import { gsap } from '../../animations/gsapSetup';
 import { Container } from './Container';
 import { Button } from '../ui/Button';
 import studyrouteLogoLight from '../../assets/brand/studyroute-logo-light.png';
+import studyrouteLogoDark from '../../assets/brand/studyroute-logo-dark.svg';
 import { navLinks } from '../../data/homepageData';
 
 export const Navbar = () => {
@@ -141,9 +142,9 @@ export const Navbar = () => {
           {/* Logo */}
           <a href="/" className="outline-none-focus rounded flex items-center" onClick={(e) => handleNavClick(e, '#home')}>
             <img
-              src={studyrouteLogoLight}
+              src={scrolled ? studyrouteLogoDark : studyrouteLogoLight}
               alt="StudyRoute"
-              className="w-[130px] sm:w-[145px] lg:w-[165px] h-auto object-contain"
+              className="w-[130px] sm:w-[145px] lg:w-[165px] h-auto object-contain transition-all duration-300"
             />
           </a>
 
@@ -154,7 +155,9 @@ export const Navbar = () => {
                 <li key={link.label}>
                   <a
                     href={link.href}
-                    className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors outline-none-focus rounded px-2 py-1"
+                    className={`text-sm font-medium transition-colors outline-none-focus rounded px-2 py-1 ${
+                      scrolled ? 'text-[#0f2a3d] hover:text-landing-accent' : 'text-white hover:text-white/80'
+                    }`}
                     onClick={(e) => handleNavClick(e, link.href)}
                   >
                     {link.label}
@@ -165,7 +168,9 @@ export const Navbar = () => {
             <div className="flex items-center space-x-4">
               <a
                 href="/login"
-                className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors outline-none-focus rounded px-2 py-1"
+                className={`text-sm font-medium transition-colors outline-none-focus rounded px-2 py-1 ${
+                  scrolled ? 'text-[#0f2a3d] hover:text-landing-accent' : 'text-white hover:text-white/80'
+                }`}
               >
                 Sign In
               </a>
@@ -175,7 +180,7 @@ export const Navbar = () => {
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden p-2 text-text-primary outline-none-focus rounded"
+            className={`md:hidden p-2 outline-none-focus rounded transition-colors duration-300 ${scrolled ? 'text-[#0f2a3d]' : 'text-white'}`}
             onClick={toggleMenu}
             aria-expanded={isOpen}
             aria-controls="mobile-menu"

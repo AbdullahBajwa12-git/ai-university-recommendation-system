@@ -10,8 +10,8 @@ export const Button = React.forwardRef(({
   const baseStyles = "inline-flex items-center justify-center font-medium transition-all duration-300 outline-none-focus rounded-full";
 
   const variants = {
-    primary: "bg-landing-accent hover:bg-landing-accent-hover text-text-inverse shadow-lg shadow-landing-accent/20 transform hover:-translate-y-0.5",
-    secondary: "bg-bg-surface hover:bg-bg-surface-hover text-text-primary border border-border-subtle hover:border-landing-accent/30",
+    primary: "bg-gradient-to-r from-landing-accent via-dest-1 to-landing-accent animate-gradient-shift text-white shadow-lg shadow-landing-accent/30 transform hover:-translate-y-1 hover:shadow-xl hover:shadow-landing-accent/40 border-none",
+    secondary: "bg-bg-surface hover:bg-bg-surface-hover text-text-primary border border-border-subtle hover:border-landing-accent/30 shadow-sm",
     ghost: "text-text-secondary hover:text-text-primary hover:bg-bg-surface"
   };
 
