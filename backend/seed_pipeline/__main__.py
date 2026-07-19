@@ -4,6 +4,7 @@ import sys
 import os
 import uuid
 from datetime import datetime, timezone
+import tempfile
 from typing import Dict, Any
 
 from .extractor import extract_csv
@@ -41,9 +42,11 @@ async def run_pipeline(institutions_csv: str, programs_csv: str, dry_run: bool, 
     if programs_csv and os.path.exists(programs_csv):
         raw_progs = list(extract_csv(programs_csv))
 
+    errors = []
+    unmapped_count = 0
+
     # 2. Transform & Validate Universities
     valid_unis = []
-    errors = []
     uni_map = {} # institution_id -> normalized_identity
 
     for row in raw_unis:
@@ -89,7 +92,10 @@ async def run_pipeline(institutions_csv: str, programs_csv: str, dry_run: bool, 
         # Taxonomy resolution
         tax = await resolve_taxonomy(norm.get("field_of_study", ""), taxonomy_cache)
         if tax["status"] in ["UNMATCHED", "AMBIGUOUS"]:
-            queue_for_manual_review(row, tax["status"])
+            unmapped_count += 1
+            queue_file = os.path.join(tempfile.gettempdir(), "unmapped_taxonomy_queue.csv")
+            queue_for_manual_review(row, tax["status"], filepath=queue_file)
+            print(f"DEBUG: Unmapped taxonomy queued to safe path: {queue_file}")
             continue
 
         norm["core_program"] = tax["core_program"]
@@ -156,6 +162,9 @@ async def run_pipeline(institutions_csv: str, programs_csv: str, dry_run: bool, 
     new_u, upd_u = 0, 0
     new_p, upd_p = 0, 0
     if not dry_run:
+        if errors or unmapped_count > 0:
+            print(f"ABORTING APPLY: Found {len(errors)} errors and {unmapped_count} unmapped taxonomies. Fix data or mappings first.")
+            sys.exit(1)
         try:
             new_u, upd_u = await load_universities(uni_diffs, version_meta, dry_run=False)
             new_p, upd_p = await load_programs(prog_diffs, version_meta, dry_run=False)
@@ -167,31 +176,64 @@ async def run_pipeline(institutions_csv: str, programs_csv: str, dry_run: bool, 
         new_p = sum(1 for d in prog_diffs if d[0] == "NEW")
         upd_p = sum(1 for d in prog_diffs if d[0] == "UPDATE")
 
+    unch_u = sum(1 for d in uni_diffs if d[0] == "UNCHANGED")
+    unch_p = sum(1 for d in prog_diffs if d[0] == "UNCHANGED")
+
     # Summary
     print("\n--- Pipeline Summary ---")
     print(f"New Universities: {new_u}")
     print(f"Updated Universities: {upd_u}")
+    print(f"Unchanged Universities: {unch_u}")
     print(f"New Programs: {new_p}")
     print(f"Updated Programs: {upd_p}")
+    print(f"Unchanged Programs: {unch_p}")
     print(f"Validation/Pipeline Errors: {len(errors)}")
     for e in errors[:5]:
         print(f" - {e}")
     if len(errors) > 5:
         print(f"   ... and {len(errors)-5} more")
 
-if __name__ == "__main__":
+def main(args_list=None):
     parser = argparse.ArgumentParser(description="Phase 7B ETL Pipeline")
     parser.add_argument("--institutions", type=str, required=True, help="Institutions CSV")
     parser.add_argument("--programs", type=str, required=True, help="Programs CSV")
-    parser.add_argument("--live", action="store_true", help="Execute live writes")
+    parser.add_argument("--live", action="store_true", help="[DEPRECATED] Alias for --apply --confirm-apply")
+    parser.add_argument("--dry-run", action="store_true", help="Execute without writing to database (default)")
+    parser.add_argument("--apply", action="store_true", help="Apply changes to the database")
+    parser.add_argument("--confirm-apply", action="store_true", help="Must be used with --apply to confirm writes")
     parser.add_argument("--dataset-version", type=str, default="ds_dev", help="Dataset version tag")
-    args = parser.parse_args()
+    args = parser.parse_args(args_list)
+
+    # Check invalid combinations
+    if args.dry_run and args.apply:
+        print("ERROR: Cannot use --dry-run with --apply. Aborting.")
+        sys.exit(1)
+    if args.dry_run and args.live:
+        print("ERROR: Cannot use --dry-run with --live. Aborting.")
+        sys.exit(1)
+    if args.apply and args.live:
+        print("ERROR: Cannot use --apply with --live. Aborting.")
+        sys.exit(1)
+    if args.confirm_apply and not (args.apply or args.live):
+        print("ERROR: --confirm-apply can only be used with --apply or --live. Aborting.")
+        sys.exit(1)
+
+    # Determine write mode
+    dry_run = True
+    if args.apply or args.live:
+        if not args.confirm_apply:
+            print("ERROR: --apply and --live require --confirm-apply to execute writes. Aborting.")
+            sys.exit(1)
+        dry_run = False
 
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
     asyncio.run(run_pipeline(
         institutions_csv=args.institutions,
         programs_csv=args.programs,
-        dry_run=not args.live,
+        dry_run=dry_run,
         dataset_version=args.dataset_version
     ))
+
+if __name__ == "__main__":
+    main()
