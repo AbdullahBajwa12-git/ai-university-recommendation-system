@@ -567,6 +567,153 @@ SYSTEM_PROMPT = (
     "Each object must have exactly these fields: 'name', 'country', 'chances', 'category', 'reason'."
 )
 
+def _normalize_degree(degree_str: str) -> str:
+    """Normalize common degree variations."""
+    if not degree_str:
+        return ""
+    d = degree_str.lower()
+    if "master" in d or "postgrad" in d or d == "grad":
+        return "master"
+    if "bachelor" in d or "undergrad" in d:
+        return "bachelor"
+    if "phd" in d or "doctor" in d:
+        return "phd"
+    return d
+
+async def _load_university_programs(db_unis) -> dict:
+    if not db_unis:
+        return {}
+    uni_ids = [u.id for u in db_unis]
+    programs = await models.UniversityProgram.find(
+        In(models.UniversityProgram.university.id, uni_ids),
+        fetch_links=True
+    ).to_list()
+
+    prog_map = {uid: [] for uid in uni_ids}
+    for p in programs:
+        # Beanie fetch_links replaces Link with actual Document if it exists
+        if hasattr(p.university, "id"):
+            prog_map[p.university.id].append(p)
+    return prog_map
+
+def _score_universities(db_unis, prog_map, profile_dict):
+    scored_unis = []
+    countries_pref = profile_dict.get('countries', [])
+    student_degree_raw = profile_dict.get('degree_applying_for', '')
+    student_degree = _normalize_degree(student_degree_raw)
+    student_major = profile_dict.get('intended_major', '').lower()
+
+    for u in db_unis:
+        u_progs = prog_map.get(u.id, [])
+        u_study_levels = {_normalize_degree(p.degree_level) for p in u_progs}
+
+        u_fields = set()
+        for p in u_progs:
+            u_fields.add(p.program_name.lower())
+            if p.specialization and hasattr(p.specialization, "name"):
+                u_fields.add(p.specialization.name.lower())
+            if p.canonical_program and hasattr(p.canonical_program, "canonical_name"):
+                u_fields.add(p.canonical_program.canonical_name.lower())
+
+        score = 0
+        if u.country in countries_pref:
+            score += 15
+        else:
+            score += 5
+
+        if student_degree and student_degree in u_study_levels:
+            score += 25
+
+        if student_major and any(student_major in f for f in u_fields):
+            score += 25
+
+        if u.qs_ranking:
+            score += max(0, 10 - (u.qs_ranking // 50))
+
+        scored_unis.append((score, u))
+
+    scored_unis.sort(key=lambda x: x[0], reverse=True)
+    return [u for score, u in scored_unis[:50]]
+
+def _build_candidate_pool(top_candidates, prog_map):
+    candidate_pool = []
+    for u in top_candidates:
+        u_progs = prog_map.get(u.id, [])
+        programs_snippet = []
+        for p in u_progs[:5]:
+            field_val = p.program_name
+            if p.specialization and hasattr(p.specialization, "name"):
+                field_val = p.specialization.name
+            programs_snippet.append({
+                "name": p.program_name,
+                "level": p.degree_level,
+                "field": field_val
+            })
+
+        candidate_pool.append({
+            "name": u.university_name,
+            "country": u.country,
+            "rank": u.qs_ranking,
+            "tuition": u.yearly_tuition_usd,
+            "acceptance_rate": u.acceptance_rate,
+            "sample_programs": programs_snippet
+        })
+    return candidate_pool
+
+def _hydrate_ai_results(raw_unis, top_candidates, prog_map, profile_dict):
+    final_universities = []
+    top_cand_dict = {u.university_name.lower(): u for u in top_candidates}
+    student_major = profile_dict.get('intended_major', '').lower()
+
+    for ai_u in raw_unis:
+        ai_name = ai_u.get("name", "")
+        if not ai_name or ai_name.lower() not in top_cand_dict:
+            continue
+
+        db_u = top_cand_dict[ai_name.lower()]
+        course_url = None
+        deadline = None
+
+        for prog in prog_map.get(db_u.id, []):
+            prog_search = f"{prog.program_name.lower()} {(prog.specialization.name.lower() if prog.specialization and hasattr(prog.specialization, 'name') else '')}"
+            if student_major and student_major in prog_search:
+                if prog.course_page_url:
+                    course_url = prog.course_page_url
+                if prog.application_deadline:
+                    deadline = prog.application_deadline
+                break
+
+        uni_website = db_u.website
+        if not uni_website or not isinstance(uni_website, str) or not uni_website.strip():
+            continue
+
+        if not course_url:
+            course_url = db_u.admissions_url or uni_website
+
+        if not deadline:
+            deadline = "Verify on official website"
+
+        final_universities.append({
+            "university_id":      str(db_u.id),
+            "university_name":    db_u.university_name,
+            "country":            db_u.country,
+            "city":               db_u.city,
+            "degree":             profile_dict.get("degree_applying_for", "N/A"),
+            "major":              profile_dict.get("intended_major", "N/A"),
+            "admission_chance":   float(ai_u.get("chances", 50)),
+            "category":           ai_u.get("category", "TARGET").upper(),
+            "world_rank":         db_u.qs_ranking,
+            "scholarship_available": bool(db_u.yearly_tuition_usd == 0 or profile_dict.get('need_scholarship', False)),
+            "university_email":   sanitize_url(db_u.admissions_email),
+            "university_website": sanitize_url(uni_website),
+            "course_page_url":    sanitize_url(course_url),
+            "tuition_fee":        db_u.yearly_tuition_usd,
+            "acceptance_rate":    db_u.acceptance_rate,
+            "deadline":           deadline,
+            "reason_for_match":   ai_u.get("reason", "Good match for your profile."),
+        })
+    return final_universities
+
 @app.post("/api/v1/ai/recommend", response_model=schemas.RecommendationResponse)
 async def get_university_recommendations(
     profile_data: schemas.StudentRecommendationProfileIn,
@@ -580,65 +727,33 @@ async def get_university_recommendations(
     for c in continents:
         if c in STUDY_DESTINATIONS:
             target_countries.extend(STUDY_DESTINATIONS[c])
-            
+
     countries_pref = profile_dict.get('countries', [])
     target_countries.extend(countries_pref)
-    
+
     target_countries = list(set(target_countries))
     valid_targets = [c for c in target_countries if c in ALL_DESTINATIONS]
-    
+
     if not valid_targets:
         valid_targets = ALL_DESTINATIONS
 
     # 2. Database Filtering & Ranking
     db_unis = await models.University.find(In(models.University.country, valid_targets)).to_list()
-    
-    student_degree = profile_dict.get('degree_applying_for', '').lower()
-    student_major = profile_dict.get('intended_major', '').lower()
-    
-    scored_unis = []
-    for u in db_unis:
-        score = 0
-        # Country match (already filtered, but explicit preference gets more points)
-        if u.country in countries_pref:
-            score += 15
-        else:
-            score += 5
-            
-        # Degree match
-        if student_degree and any(student_degree in sl.lower() for sl in u.study_levels):
-            score += 25
-            
-        # Field relevance
-        if student_major and any(student_major in f.lower() for f in u.fields):
-            score += 25
-            
-        # Ranking boost (slight weight)
-        if u.qs_ranking:
-            score += max(0, 10 - (u.qs_ranking // 50))
-            
-        scored_unis.append((score, u))
-        
-    scored_unis.sort(key=lambda x: x[0], reverse=True)
-    top_candidates = [u for score, u in scored_unis[:50]]
-    
+
+    try:
+        prog_map = await _load_university_programs(db_unis)
+        top_candidates = _score_universities(db_unis, prog_map, profile_dict)
+    except Exception as e:
+        print(f"[ERROR] Database loading/scoring failed: {e}")
+        raise HTTPException(status_code=500, detail="An error occurred while matching universities. Please try again.") from e
+
     print(f"[DEBUG] Found {len(db_unis)} DB universities. Pre-filtered to {len(top_candidates)} candidates.")
 
     if not top_candidates:
         raise HTTPException(status_code=404, detail="No matching universities found in the database for your preferences.")
 
     # Prepare candidate pool for OpenAI
-    candidate_pool = []
-    for u in top_candidates:
-        programs_snippet = [{"name": p.program_name, "level": p.study_level, "field": p.field} for p in u.programs[:5]]
-        candidate_pool.append({
-            "name": u.university_name,
-            "country": u.country,
-            "rank": u.qs_ranking,
-            "tuition": u.yearly_tuition_usd,
-            "acceptance_rate": u.acceptance_rate,
-            "sample_programs": programs_snippet
-        })
+    candidate_pool = _build_candidate_pool(top_candidates, prog_map)
 
     # 3. Build Prompt
     p = profile_dict
@@ -661,7 +776,7 @@ Candidate Pool:
         raise HTTPException(status_code=500, detail="OpenAI API key not configured.")
 
     payload = {
-        "model": "gpt-4o",
+        "model": "gpt-4.1-mini",
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user",   "content": user_message}
@@ -674,6 +789,7 @@ Candidate Pool:
         "Authorization": f"Bearer {openai_key}"
     }
 
+    final_universities = None
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
             resp = await client.post(OPENAI_API_URL, headers=headers, json=payload)
@@ -682,60 +798,28 @@ Candidate Pool:
         content = resp.json()["choices"][0]["message"]["content"]
         data = json.loads(content)
         raw_unis = data.get("universities", [])
-        
-        # 4. Validating and Hydrating output
-        final_universities = []
-        top_cand_dict = {u.university_name.lower(): u for u in top_candidates}
-        
-        for ai_u in raw_unis:
-            ai_name = ai_u.get("name", "")
-            if not ai_name or ai_name.lower() not in top_cand_dict:
-                continue # Hallucination, drop it
-                
-            db_u = top_cand_dict[ai_name.lower()]
-            
-            # Find matching program for course URL and deadline
-            course_url = None
-            deadline = None
-            for prog in db_u.programs:
-                if student_major and (student_major in prog.field.lower() or student_major in prog.program_name.lower()):
-                    if prog.course_page_url:
-                        course_url = prog.course_page_url
-                    if prog.deadline:
-                        deadline = prog.deadline
-                    break
-                    
-            if not course_url:
-                course_url = db_u.admissions_url or db_u.website
-                
-            if not deadline:
-                deadline = "Verify on official website"
 
-            final_universities.append({
-                "university_id":      str(db_u.id),
-                "university_name":    db_u.university_name,
-                "country":            db_u.country,
-                "city":               db_u.city,
-                "degree":             p.get("degree_applying_for", "N/A"),
-                "major":              p.get("intended_major", "N/A"),
-                "admission_chance":   float(ai_u.get("chances", 50)),
-                "category":           ai_u.get("category", "TARGET").upper(),
-                "world_rank":         db_u.qs_ranking,
-                "scholarship_available": bool(db_u.yearly_tuition_usd == 0 or p.get('need_scholarship', False)),
-                "university_email":   sanitize_url(db_u.admissions_email),
-                "university_website": sanitize_url(db_u.website),
-                "course_page_url":    sanitize_url(course_url),
-                "tuition_fee":        db_u.yearly_tuition_usd,
-                "acceptance_rate":    db_u.acceptance_rate,
-                "deadline":           deadline,
-                "reason_for_match":   ai_u.get("reason", "Good match for your profile."),
-            })
-
+        final_universities = _hydrate_ai_results(raw_unis, top_candidates, prog_map, profile_dict)
         print(f"[DEBUG] AI returned {len(raw_unis)} unis. Validated & Hydrated {len(final_universities)}.")
 
         if not final_universities:
             raise HTTPException(status_code=500, detail="AI failed to generate valid recommendations from the candidate pool.")
 
+    except httpx.HTTPStatusError as e:
+        print(f"OpenAI request failed with status {e.response.status_code}")
+        raise HTTPException(status_code=502, detail="The recommendation service is temporarily unavailable. Please try again.")
+    except httpx.RequestError as e:
+        print(f"OpenAI network/HTTP error: {e}")
+        raise HTTPException(status_code=502, detail="The recommendation service is temporarily unavailable. Please try again.")
+    except (json.JSONDecodeError, KeyError, ValueError) as e:
+        print(f"OpenAI parsing/validation error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate recommendations. Please try again.")
+    except Exception as e:
+        print(f"AI recommendation error: {type(e).__name__} - {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to generate recommendations. Please try again.") from e
+
+    # 5. Save Session
+    try:
         session = models.RecommendationSession(
             user=current_user,
             profile_snapshot=profile_dict,
@@ -752,12 +836,9 @@ Candidate Pool:
             "created_at": session.created_at,
         }
 
-    except httpx.HTTPStatusError as e:
-        print(f"OpenAI request failed with status {e.response.status_code}")
-        raise HTTPException(status_code=502, detail="The recommendation service is temporarily unavailable. Please try again.")
     except Exception as e:
         print(f"AI recommendation error: {type(e).__name__} - {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to generate recommendations. Please try again.")
+        raise HTTPException(status_code=500, detail="Failed to generate recommendations. Please try again.") from e
 
 # ── RECOMMENDATION HISTORY ───────────────────────────────────────────────────
 
