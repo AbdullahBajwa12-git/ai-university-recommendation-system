@@ -139,8 +139,8 @@ export const Hero = () => {
             <Button variant="primary" size="lg" className="hero-cta" onClick={() => window.location.href = '/register'}>
               Find My Universities
             </Button>
-            <Button variant="secondary" size="lg" className="hero-cta" onClick={() => { document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' }); }}>
-              See How It Works
+            <Button variant="secondary" size="lg" className="hero-cta" onClick={() => { document.getElementById('journey')?.scrollIntoView({ behavior: 'smooth' }); }}>
+              Students Journey
             </Button>
           </div>
 

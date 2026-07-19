@@ -11,7 +11,7 @@ export const Button = React.forwardRef(({
 
   const variants = {
     primary: "bg-gradient-to-r from-landing-accent via-dest-1 to-landing-accent animate-gradient-shift text-white shadow-lg shadow-landing-accent/30 transform hover:-translate-y-1 hover:shadow-xl hover:shadow-landing-accent/40 border-none",
-    secondary: "bg-bg-surface hover:bg-bg-surface-hover text-text-primary border border-border-subtle hover:border-landing-accent/30 shadow-sm",
+    secondary: "bg-gradient-to-r from-bg-surface via-blue-100 to-bg-surface animate-gradient-shift text-text-primary border border-border-subtle hover:border-landing-accent/30 shadow-sm",
     ghost: "text-text-secondary hover:text-text-primary hover:bg-bg-surface"
   };
 

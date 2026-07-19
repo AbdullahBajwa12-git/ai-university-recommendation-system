@@ -24,10 +24,10 @@ export const FinalCTA = () => {
         </p>
 
         <div className="flex flex-wrap justify-center gap-4">
-          <Button variant="primary" size="lg">
+          <Button variant="primary" size="lg" onClick={() => window.location.href = '/register'}>
             Create My Profile
           </Button>
-          <Button variant="secondary" size="lg">
+          <Button variant="secondary" size="lg" onClick={() => { document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' }); }}>
             See How It Works
           </Button>
         </div>

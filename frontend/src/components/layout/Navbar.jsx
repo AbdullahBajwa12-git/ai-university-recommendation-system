@@ -121,7 +121,7 @@ export const Navbar = () => {
             >
               Sign In
             </a>
-            <Button className="w-full" onClick={() => { closeMenu(); window.location.href = '/login'; }}>
+            <Button className="w-full" onClick={() => { closeMenu(); window.location.href = '/register'; }}>
               Find Universities
             </Button>
           </div>
@@ -174,7 +174,7 @@ export const Navbar = () => {
               >
                 Sign In
               </a>
-              <Button size="sm" onClick={() => window.location.href = '/login'}>Find Universities</Button>
+              <Button size="sm" onClick={() => window.location.href = '/register'}>Find Universities</Button>
             </div>
           </div>
 

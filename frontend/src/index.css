@@ -24,7 +24,7 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
-    
+
     /* Landing Page Variables - Horizon Bloom Palette */
     --color-bg-base: #FBFAF7;
     --color-bg-surface: #FFFFFF;
@@ -77,9 +77,11 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   .landing-page {
     --spacing-container: 2rem;
     --spacing-section: 6rem;
@@ -87,6 +89,7 @@
     -moz-osx-font-smoothing: grayscale;
     font-family: theme('fontFamily.landing-sans');
   }
+
   .landing-page h1,
   .landing-page h2,
   .landing-page h3,
@@ -104,14 +107,16 @@
     backdrop-filter: blur(12px);
     border: 1px solid var(--color-border-subtle);
   }
+
   .text-balance {
     text-wrap: balance;
   }
+
   .outline-none-focus:focus-visible {
     outline: 2px solid var(--color-border-focus);
     outline-offset: 2px;
   }
-  
+
   /* Destinations Marquee */
   .marquee-track {
     display: flex;
@@ -120,15 +125,18 @@
     backface-visibility: hidden;
     animation: marquee 35s linear infinite;
   }
+
   .marquee-track:hover,
   .marquee-track:focus-within {
     animation-play-state: paused;
   }
+
   @media (prefers-reduced-motion: reduce) {
     .marquee-track {
       animation: none !important;
       transform: translate3d(0, 0, 0) !important;
     }
+
     .animate-smoke-flow,
     .animate-pulse-slow {
       animation: none !important;
@@ -139,9 +147,11 @@
   .animate-smoke-flow {
     animation: smoke-flow var(--duration, 20s) linear infinite;
   }
+
   .animate-pulse-slow {
     animation: pulse-slow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
+
   .animate-gradient-shift {
     animation: gradient-shift 3s ease infinite;
     background-size: 200% 200%;
@@ -149,19 +159,49 @@
 }
 
 @keyframes marquee {
-  0% { transform: translate3d(0, 0, 0); }
-  100% { transform: translate3d(-50%, 0, 0); }
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
 }
+
 @keyframes smoke-flow {
-  from { stroke-dashoffset: 100; }
-  to { stroke-dashoffset: 0; }
+  from {
+    stroke-dashoffset: 100;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
 }
+
 @keyframes pulse-slow {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(1.1); }
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
 }
+
 @keyframes gradient-shift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }

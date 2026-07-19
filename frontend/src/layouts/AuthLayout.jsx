@@ -1,7 +1,12 @@
-import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 
 const AuthLayout = () => {
+  const location = useLocation();
+
+  if (location.pathname === '/login' || location.pathname === '/register') {
+    return <Outlet />;
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/50 px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8 rounded-2xl bg-card p-8 shadow-xl">
