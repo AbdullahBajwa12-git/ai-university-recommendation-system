@@ -1,4 +1,3 @@
-import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
 
@@ -28,6 +27,8 @@ import SOPAnalyzer from '../pages/student/SOPAnalyzer';
 import Scholarships from '../pages/student/Scholarships';
 import AIChatAssistant from '../pages/student/AIChatAssistant';
 import FindUniversities from '../pages/student/FindUniversities';
+import SavedUniversities from '../pages/student/SavedUniversities';
+import SearchHistory from '../pages/student/SearchHistory';
 
 // Admin Pages
 import AdminDashboard from '../pages/admin/AdminDashboard';
@@ -60,6 +61,8 @@ const AppRoutes = () => {
           <Route path="/profile" element={<Profile />} />
           <Route path="/preferences" element={<Preferences />} />
           <Route path="/universities" element={<Universities />} />
+          <Route path="/saveduniversities" element={<SavedUniversities />} />
+          <Route path="/search-history" element={<SearchHistory />} />
           {/* Mock Recommendations page retired — redirect to the real AI flow */}
           <Route path="/recommendations" element={<Navigate to="/find-universities" replace />} />
           <Route path="/predict" element={<AdmissionPrediction />} />

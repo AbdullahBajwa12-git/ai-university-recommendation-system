@@ -1,147 +1,182 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  UserCircle, 
-  School, 
-  Sparkles, 
-  FileText, 
-  LogOut,
-  Menu,
-  X,
-  Bell,
-  Sun,
-  Moon,
+import {
+  Home,
+  Compass,
+  Heart,
+  BookOpen,
   Award,
-  SlidersHorizontal,
-  TrendingUp,
-  FileCheck,
-  CheckCircle2,
-  MessageSquare
+  User,
+  Sliders,
+  Sparkles,
+  MessageSquare,
+  MoreVertical,
+  History,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../utils/cn';
 
 const StudentLayout = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle('dark');
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
+
+  const toggleTheme = () => {
+    if (isDarkMode) {
+      document.documentElement.classList.remove('dark');
+      localStorage.theme = 'light';
+      setIsDarkMode(false);
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.theme = 'dark';
+      setIsDarkMode(true);
+    }
   };
 
-  const navItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'Find Universities', path: '/find-universities', icon: Sparkles, highlight: true },
-    { name: 'Profile', path: '/profile', icon: UserCircle },
-    { name: 'Preferences', path: '/preferences', icon: SlidersHorizontal },
-    { name: 'Discover', path: '/universities', icon: School },
-    { name: 'AI Recommendations', path: '/find-universities', icon: Sparkles },
-    { name: 'Admission Predictor', path: '/predict', icon: TrendingUp },
-    { name: 'Resume Analyzer', path: '/resume-analyzer', icon: FileCheck },
-    { name: 'SOP Analyzer', path: '/sop-analyzer', icon: FileText },
-    { name: 'Scholarships', path: '/scholarships', icon: Award },
-    { name: 'Applications', path: '/applications', icon: CheckCircle2 },
-    { name: 'AI Chat Advisor', path: '/ai-chat', icon: MessageSquare },
+  const getInitials = (name) => {
+    if (!name) return 'AS';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+  };
+
+  const navGroups = [
+    {
+      label: 'MAIN JOURNEY',
+      items: [
+        { name: 'Dashboard', path: '/dashboard', icon: Home },
+        { name: 'Find Universities', path: '/find-universities', icon: Compass },
+        { name: 'Saved and Compare', path: '/saveduniversities', icon: Heart },
+        { name: 'University Directory', path: '/universities', icon: BookOpen },
+        { name: 'Scholarships', path: '/scholarships', icon: Award },
+      ]
+    },
+    {
+      label: 'YOUR PROFILE',
+      items: [
+        { name: 'Academic Profile', path: '/profile', icon: User },
+        { name: 'Study Preferences', path: '/preferences', icon: Sliders },
+        { name: 'Search History', path: '/search-history', icon: History },
+      ]
+    },
+    {
+      label: 'GUIDANCE',
+      items: [
+        { name: 'AI Study Advisor', path: '/ai-chat', icon: Sparkles },
+      ]
+    }
   ];
 
   return (
-    <div className="flex min-h-screen bg-background">
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden" 
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
+    <div className="flex min-h-screen bg-[#F8F9FA] font-sans">
       {/* Sidebar */}
-      <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 transform bg-card border-r transition-transform duration-200 ease-in-out lg:static lg:translate-x-0",
-        sidebarOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
-        <div className="flex h-full flex-col">
-          <div className="flex h-16 items-center justify-between px-6 border-b">
-            <span className="text-xl font-bold text-primary">AI Advisor</span>
-            <button className="lg:hidden" onClick={() => setSidebarOpen(false)}>
-              <X className="h-6 w-6" />
-            </button>
+      <aside className="w-[280px] bg-[#F8F9FA] border-r border-gray-200 flex flex-col fixed inset-y-0 left-0 z-50">
+        {/* Logo */}
+        <div className="h-20 flex items-center px-8">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gray-800 rounded flex items-center justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
+            </div>
+            <span className="text-xl font-bold text-gray-900 tracking-tight">StudyRoute</span>
           </div>
+        </div>
 
-          <nav className="flex-1 space-y-1 px-4 py-6">
-            {navItems.map((item) => (
-              <Link
-                key={item.name}
-                to={item.path}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors",
-                  location.pathname === item.path
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                    : item.highlight 
-                      ? "text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10"
-                      : "text-muted-foreground hover:bg-secondary"
-                )}
-                onClick={() => setSidebarOpen(false)}
-              >
-                <item.icon className="h-5 w-5" />
-                {item.name}
-              </Link>
-            ))}
-          </nav>
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto px-6 py-4 space-y-8">
+          {navGroups.map((group, idx) => (
+            <div key={idx}>
+              <h3 className="text-[11px] font-bold text-gray-400 tracking-widest uppercase mb-4 px-2">
+                {group.label}
+              </h3>
+              <ul className="space-y-1">
+                {group.items.map((item) => {
+                  const isActive = location.pathname === item.path || (item.path === '/dashboard' && location.pathname === '/');
+                  return (
+                    <li key={item.name}>
+                      <Link
+                        to={item.path}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200",
+                          isActive
+                            ? "bg-[#E6F0FF] text-[#2563EB]"
+                            : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                        )}
+                      >
+                        <div className={cn(
+                          "flex items-center justify-center w-8 h-8 rounded-lg",
+                          isActive ? "bg-[#2563EB] text-white" : "bg-gray-100/80 text-gray-500"
+                        )}>
+                          <item.icon className="w-4 h-4" />
+                        </div>
+                        {item.name}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </nav>
 
-          <div className="p-4 border-t">
-            <button 
-              onClick={logout}
-              className="flex w-full items-center gap-3 px-4 py-3 text-sm font-medium text-destructive rounded-lg hover:bg-destructive/10"
-            >
-              <LogOut className="h-5 w-5" />
-              Logout
-            </button>
+        {/* User Account */}
+        <div className="p-6">
+          <div className="flex items-center gap-3 bg-gray-100/80 p-3 rounded-2xl cursor-pointer hover:bg-gray-200 transition-colors">
+            <div className="w-10 h-10 rounded-full bg-[#2563EB] text-white flex items-center justify-center font-bold text-sm">
+              {getInitials(user?.full_name)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-gray-900 truncate">{user?.full_name || 'Abdullah Shahid'}</p>
+              <p className="text-xs text-gray-500 truncate">Student account</p>
+            </div>
+            <MoreVertical className="w-5 h-5 text-gray-400" />
           </div>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Main Content Area */}
+      <div className="flex-1 ml-[280px] flex flex-col min-w-0 bg-white rounded-tl-3xl shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.1)] relative z-10 overflow-hidden border-l border-gray-100">
         {/* Top Navbar */}
-        <header className="h-16 flex items-center justify-between px-4 sm:px-8 bg-card border-b sticky top-0 z-30">
-          <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
-            <Menu className="h-6 w-6" />
-          </button>
-
-          <div className="flex-1 ml-4 lg:ml-0">
-            <h1 className="text-lg font-semibold truncate">
-              {navItems.find(i => i.path === location.pathname)?.name || 'Page'}
-            </h1>
+        <header className="h-20 flex items-center justify-between px-10 border-b border-gray-100 bg-white">
+          <div className="flex-1">
+            <p className="text-sm font-medium text-gray-400">
+              Student workspace / <span className="text-gray-900">Dashboard</span>
+            </p>
           </div>
 
           <div className="flex items-center gap-4">
-            <button 
-              onClick={toggleDarkMode}
-              className="p-2 rounded-full hover:bg-secondary"
+            <button
+              onClick={toggleTheme}
+              className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors"
             >
-              {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
-            <button className="p-2 rounded-full hover:bg-secondary relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-2 right-2 h-2 w-2 bg-destructive rounded-full" />
+            <button className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors">
+              <MessageSquare className="w-4 h-4" />
             </button>
-            <div className="flex items-center gap-2 border-l pl-4">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium line-clamp-1">{user?.full_name || 'Student'}</p>
-                <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
-              </div>
-              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center border">
-                <UserCircle className="h-6 w-6 text-primary" />
-              </div>
+            <button className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 transition-colors">
+              <Sparkles className="w-4 h-4" />
+            </button>
+            <div className="w-10 h-10 rounded-full bg-[#2563EB] text-white flex items-center justify-center font-bold text-sm ml-2">
+              {getInitials(user?.full_name)}
             </div>
           </div>
         </header>
 
-        <main className="flex-1 p-4 sm:p-8 overflow-y-auto">
+        {/* Page Content */}
+        <main className="flex-1 overflow-y-auto bg-white">
           <Outlet />
         </main>
       </div>

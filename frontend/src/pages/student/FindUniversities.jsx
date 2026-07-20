@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import {
-    Sparkles, History, Bookmark, Search,
-    Download, FileText, BarChart3, ArrowRight,
-    TrendingUp, SlidersHorizontal, Trash2, Clock, RotateCcw, X
+    Sparkles, Search,
+    Download, FileText,
+    TrendingUp, RotateCcw, X
 } from 'lucide-react';
 import { useRecommendations } from '../../hooks/useRecommendations';
 import { useSearchHistory } from '../../hooks/useSearchHistory';
@@ -13,8 +13,6 @@ import Button from '../../components/common/Button';
 import profileService from '../../services/profileService';
 import { jsPDF } from 'jspdf';
 import { saveAs } from 'file-saver';
-import { cn } from '../../utils/cn';
-
 // Maps saved StudentProfile/Preferences fields → wizard form field names.
 // Only returns keys that have a usable value, so it merges over defaults
 // without clobbering anything with null/empty.
@@ -64,7 +62,6 @@ const isSameUniversity = (a, b) => {
 
 const FindUniversities = () => {
     const {
-        history,
         saved,
         getRecommendations,
         isGenerating,
@@ -74,62 +71,20 @@ const FindUniversities = () => {
         savingUniversity,
         isUnsaving,
         unsavingSavedId,
-        isLoadingHistory,
         isLoadingSaved,
         isSavedError,
-        refetchSaved,
-        getSessionDetails,
-        deleteHistory,
-        isDeletingHistory,
+        refetchSaved
     } = useRecommendations();
 
-    const { localHistory, saveToHistory, clearHistory } = useSearchHistory();
+    const { saveToHistory } = useSearchHistory();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [activeResults, setActiveResults] = useState(null);
-    const [activeHistorySessionId, setActiveHistorySessionId] = useState(null);
     const [comparingItems, setComparingItems] = useState([]);
     const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
     const [viewMode, setViewMode] = useState('new'); // 'new', 'history', 'saved'
     const [prefillData, setPrefillData] = useState(null);  // form data from history/profile
     const [prefillSource, setPrefillSource] = useState(null); // 'profile' | 'history' | null
-    const [loadingHistoryItem, setLoadingHistoryItem] = useState(null); // session_id being loaded
-    const [historyTab, setHistoryTab] = useState('local'); // 'local' | 'remote'
-    const [sessionToDelete, setSessionToDelete] = useState(null);
-    const [deletingSessionId, setDeletingSessionId] = useState(null);
-    const dialogRef = useRef(null);
-
-    useEffect(() => {
-        if (sessionToDelete) {
-            dialogRef.current?.focus();
-
-            const handleKeyDown = (e) => {
-                if (e.key === 'Escape' && !deletingSessionId && !isDeletingHistory) {
-                    setSessionToDelete(null);
-                }
-            };
-            document.addEventListener('keydown', handleKeyDown);
-            return () => document.removeEventListener('keydown', handleKeyDown);
-        }
-    }, [sessionToDelete, deletingSessionId, isDeletingHistory]);
-
-    const handleDeleteConfirm = async () => {
-        if (!sessionToDelete) return;
-        setDeletingSessionId(sessionToDelete.session_id);
-        try {
-            await deleteHistory(sessionToDelete.session_id);
-            if (activeHistorySessionId === sessionToDelete.session_id) {
-                setActiveResults(null);
-                setActiveHistorySessionId(null);
-                setViewMode('new');
-            }
-            setSessionToDelete(null);
-        } catch {
-            // Toast handles the error via useRecommendations hook
-        } finally {
-            setDeletingSessionId(null);
-        }
-    };
 
     // Open a fresh wizard, pre-filling from the saved profile/preferences when available.
     // Profile fetch is best-effort: failure or empty data just opens the default form.
@@ -156,7 +111,6 @@ const FindUniversities = () => {
                 // ✅ Persist the inputs to localStorage history
                 saveToHistory(data);
                 setActiveResults(results);
-                setActiveHistorySessionId(null);
                 setViewMode('new');
                 setIsModalOpen(false);
                 setPrefillData(null);
@@ -169,70 +123,7 @@ const FindUniversities = () => {
 
 
 
-    // Directly view stored history results without generating new ones
-    const handleViewResults = async (session) => {
-        setLoadingHistoryItem(session.session_id);
-        try {
-            const details = await getSessionDetails(session.session_id);
-            setActiveResults(details);
-            setActiveHistorySessionId(session.session_id);
-            setViewMode('history');
-            setIsModalOpen(false);
-        } catch (error) {
-            console.error(error);
-            import('react-hot-toast').then(({ toast }) => toast.error('Failed to load search history results'));
-        } finally {
-            setLoadingHistoryItem(null);
-        }
-    };
 
-    // Open wizard with previous inputs to allow the student to modify and regenerate
-    const handleUseInputsAgain = async (e, session) => {
-        e.stopPropagation();
-        setLoadingHistoryItem(session.session_id);
-        try {
-            const details = await getSessionDetails(session.session_id);
-            const historicalProfile = details.student_profile || {};
-
-            // Explicitly map keys without using fallbacks, loops, or array spreads
-            const explicitData = {
-                full_name: historicalProfile.full_name || '',
-                email: historicalProfile.email || '',
-                country: historicalProfile.country || '',
-                current_degree_level: historicalProfile.current_degree_level || '',
-                current_university: historicalProfile.current_university || '',
-                cgpa: historicalProfile.cgpa || '',
-                graduation_year: historicalProfile.graduation_year || '',
-                degree_applying_for: historicalProfile.degree_applying_for || '',
-                intended_major: historicalProfile.intended_major || '',
-                ielts: historicalProfile.ielts || '',
-                toefl: historicalProfile.toefl || '',
-                gre: historicalProfile.gre || '',
-                gmat: historicalProfile.gmat || '',
-                sat: historicalProfile.sat || '',
-                need_scholarship: Boolean(historicalProfile.need_scholarship),
-                fully_funded_required: Boolean(historicalProfile.fully_funded_required),
-                partial_scholarship_accepted: historicalProfile.partial_scholarship_accepted !== false,
-                budget_max: historicalProfile.budget_max || '',
-                continents: Array.isArray(historicalProfile.continents) ? historicalProfile.continents : [],
-                countries: Array.isArray(historicalProfile.countries) ? historicalProfile.countries : [],
-                public_only: Boolean(historicalProfile.public_only),
-                private_allowed: historicalProfile.private_allowed !== false,
-                research_focused: Boolean(historicalProfile.research_focused),
-                industry_focused: Boolean(historicalProfile.industry_focused),
-                top_ranked_only: Boolean(historicalProfile.top_ranked_only)
-            };
-
-            setPrefillData(explicitData);
-            setPrefillSource('history');
-            setIsModalOpen(true);
-        } catch (error) {
-            console.error(error);
-            import('react-hot-toast').then(({ toast }) => toast.error('Failed to load search history inputs'));
-        } finally {
-            setLoadingHistoryItem(null);
-        }
-    };
 
     const toggleCompare = (uni) => {
         const isAlreadyComparing = comparingItems.some(item => item.university_name === uni.university_name);
@@ -294,84 +185,7 @@ const FindUniversities = () => {
 
 
 
-    const safeHistory = Array.isArray(history) ? history : [];
-    const sortedHistory = [...safeHistory].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    const recentHistory = sortedHistory.slice(0, 5);
 
-    const renderHistoryList = (list) => {
-        if (isLoadingHistory) {
-            return (
-                <div className="space-y-3">
-                    {[1, 2, 3].map(i => <div key={i} className="h-12 bg-gray-100 dark:bg-gray-700 animate-pulse rounded-xl" />)}
-                </div>
-            );
-        }
-        if (!list || list.length === 0) {
-            return (
-                <div className="text-center py-6">
-                    <div className="h-10 w-10 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <Search className="h-5 w-5 text-gray-300" />
-                    </div>
-                    <p className="text-xs text-gray-500 italic">No previous searches yet.</p>
-                </div>
-            );
-        }
-        return (
-            <div className="space-y-2">
-                {list.map(session => (
-                    <article
-                        key={session.session_id}
-                        className="group relative flex flex-col gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-indigo-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all"
-                    >
-                        {loadingHistoryItem === session.session_id && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-white/70 dark:bg-gray-800/70 rounded-xl z-10">
-                                <div className="h-4 w-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                            </div>
-                        )}
-                        <div className="flex-1 min-w-0 pr-8">
-                            <p className="text-xs font-bold text-gray-900 dark:text-white line-clamp-1">
-                                {session.intended_major || 'Any Major'} · {session.degree_applying_for || 'Any Degree'}
-                            </p>
-                            <p className="text-[10px] text-gray-400 mt-0.5">
-                                {new Date(session.created_at).toLocaleDateString()} • {session.total_count} results
-                            </p>
-                        </div>
-                        <div className="flex gap-2 z-20">
-                            <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); handleViewResults(session); }}
-                                className="text-[10px] text-white bg-indigo-500 hover:bg-indigo-600 px-3 py-1.5 rounded font-bold transition-colors"
-                            >
-                                View Results
-                            </button>
-                            <button
-                                type="button"
-                                onClick={(e) => handleUseInputsAgain(e, session)}
-                                className="text-[10px] text-indigo-600 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:hover:bg-indigo-900/60 px-3 py-1.5 rounded font-bold flex items-center gap-1 transition-colors"
-                            >
-                                <RotateCcw className="h-2.5 w-2.5" /> Use Inputs Again
-                            </button>
-                        </div>
-                        <button
-                            type="button"
-                            aria-label="Delete history session"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setSessionToDelete(session);
-                            }}
-                            className="absolute top-2 right-2 p-1.5 bg-gray-50 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-gray-400 hover:text-red-500 transition-all z-20"
-                        >
-                            {deletingSessionId === session.session_id ? (
-                                <div className="h-3 w-3 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                                <Trash2 className="h-3.5 w-3.5" />
-                            )}
-                        </button>
-                    </article>
-                ))}
-            </div>
-        );
-    };
 
     return (
         <div className="relative space-y-8 pb-32">
@@ -394,13 +208,7 @@ const FindUniversities = () => {
                     <p className="text-gray-500 mt-2 text-lg">Personalized AI recommendations matched to your academic excellence.</p>
                 </div>
                 <div className="flex gap-3">
-                    <Button
-                        variant="outline"
-                        onClick={() => setViewMode('saved')}
-                        className={cn("gap-2 rounded-2xl px-6", viewMode === 'saved' && "bg-primary/10 border-primary text-primary")}
-                    >
-                        <Bookmark className="h-4 w-4" /> Saved {saved.length > 0 && `(${saved.length})`}
-                    </Button>
+
                     <Button
                         onClick={openFreshWizard}
                         className="gap-2 px-8 rounded-2xl shadow-xl shadow-primary/20 bg-gradient-to-br from-primary to-indigo-600"
@@ -411,101 +219,17 @@ const FindUniversities = () => {
             </div>
 
             {/* Main Content Area */}
-            <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+            <div className="space-y-8">
 
-                {/* Left Sidebar: Search History */}
-                <div className="space-y-6">
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-[2rem] border border-gray-100 dark:border-gray-700">
-                        {/* History Tab Toggle */}
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-black uppercase tracking-widest text-gray-400 flex items-center gap-2">
-                                <History className="h-4 w-4" /> Search History
-                            </h3>
-                            {localHistory.length > 0 && historyTab === 'local' && (
-                                <button
-                                    onClick={clearHistory}
-                                    title="Clear all local history"
-                                    className="text-[10px] text-red-400 hover:text-red-600 font-bold uppercase tracking-wide flex items-center gap-1 transition-colors"
-                                >
-                                    <Trash2 className="h-3 w-3" /> Clear
-                                </button>
-                            )}
-                        </div>
 
-                        {/* Tab bar */}
-                        <div className="flex bg-gray-100 dark:bg-gray-700 rounded-xl p-1 mb-4 gap-1">
-                            <button
-                                onClick={() => setHistoryTab('local')}
-                                className={cn(
-                                    "flex-1 text-[10px] font-black uppercase tracking-widest py-1.5 rounded-lg transition-all",
-                                    historyTab === 'local'
-                                        ? "bg-white dark:bg-gray-600 shadow text-gray-900 dark:text-white"
-                                        : "text-gray-400 hover:text-gray-600"
-                                )}
-                            >
-                                <Clock className="h-3 w-3 inline mr-1" />Recent
-                            </button>
-                            <button
-                                onClick={() => setHistoryTab('remote')}
-                                className={cn(
-                                    "flex-1 text-[10px] font-black uppercase tracking-widest py-1.5 rounded-lg transition-all",
-                                    historyTab === 'remote'
-                                        ? "bg-white dark:bg-gray-600 shadow text-gray-900 dark:text-white"
-                                        : "text-gray-400 hover:text-gray-600"
-                                )}
-                            >
-                                <History className="h-3 w-3 inline mr-1" />All
-                            </button>
-                        </div>
-
-                        {/* LOCAL History Tab */}
-                        {historyTab === 'local' && (
-                            renderHistoryList(recentHistory)
-                        )}
-
-                        {/* REMOTE (API) History Tab */}
-                        {historyTab === 'remote' && (
-                            renderHistoryList(safeHistory)
-                        )}
-                    </div>
-
-                    <div className="bg-indigo-600 p-8 rounded-[2rem] text-white shadow-xl shadow-indigo-200 dark:shadow-none">
-                        <TrendingUp className="h-8 w-8 mb-4" />
-                        <h4 className="text-xl font-black leading-tight mb-2">Enhance admission chances by matching accurately</h4>
-                        <p className="text-xs text-indigo-100 mb-6">Our AI considers GPA, language test scores, and research papers for real-world accuracy.</p>
-                        <button className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-4 py-2 rounded-full hover:bg-white/30 transition-colors">Learn How it Works</button>
-                    </div>
-                </div>
 
                 {/* Main Content Area */}
                 <div className="xl:col-span-3 space-y-8">
 
-                    {(activeResults || saved.length > 0 || viewMode === 'saved') ? (
+                    {activeResults ? (
                         <>
                             {/* Controls */}
-                            <div className="bg-white dark:bg-gray-800 p-6 rounded-[2rem] border border-gray-100 dark:border-gray-700 flex flex-col md:flex-row justify-between items-center gap-4">
-                                <div className="flex gap-2">
-                                    <span className={cn(
-                                        "px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all cursor-pointer",
-                                        viewMode === 'new' ? "bg-primary text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-500"
-                                    )} onClick={() => setViewMode('new')}>
-                                        New Results
-                                    </span>
-                                    {activeHistorySessionId && (
-                                        <span className={cn(
-                                            "px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all cursor-pointer",
-                                            viewMode === 'history' ? "bg-indigo-500 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-500"
-                                        )} onClick={() => setViewMode('history')}>
-                                            Historical Results
-                                        </span>
-                                    )}
-                                    <span className={cn(
-                                        "px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all cursor-pointer",
-                                        viewMode === 'saved' ? "bg-primary text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-500"
-                                    )} onClick={() => setViewMode('saved')}>
-                                        Saved Bookmarks
-                                    </span>
-                                </div>
+                            <div className="bg-white dark:bg-gray-800 p-6 rounded-[2rem] border border-gray-100 dark:border-gray-700 flex flex-col md:flex-row justify-end items-center gap-4">
 
                                 <div className="flex items-center gap-3">
                                     {comparingItems.length > 0 && (
@@ -640,22 +364,34 @@ const FindUniversities = () => {
 
                         </>
                     ) : (
-                        <div className="py-32 text-center bg-white dark:bg-gray-800 rounded-[3rem] border-2 border-dashed border-gray-100 dark:border-gray-700">
-                            <div className="h-24 w-24 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-8">
-                                <Sparkles className="h-12 w-12 text-primary animate-pulse" />
+                        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+                            <div className="bg-gradient-to-b from-[#6366f1] to-[#4f46e5] rounded-[2rem] p-8 text-white shadow-xl shadow-indigo-500/20 flex flex-col justify-between min-h-[400px]">
+                                <div>
+                                    <TrendingUp className="h-8 w-8 mb-6 text-white" />
+                                    <h3 className="text-2xl font-bold mb-4">Enhance admission chances by matching accurately</h3>
+                                    <p className="text-white/80 text-sm leading-relaxed">Our AI considers GPA, language test scores, and research papers for real-world accuracy.</p>
+                                </div>
+                                <button className="mt-8 w-full text-xs font-bold tracking-widest uppercase bg-white/10 hover:bg-white/20 transition-colors py-4 rounded-xl border border-white/20">
+                                    Learn how it works
+                                </button>
                             </div>
-                            <h2 className="text-3xl font-black mb-4">You haven't run a search yet</h2>
-                            <p className="text-gray-500 mb-10 max-w-md mx-auto">Complete our 6-step wizard to see AI-powered university matches tailored exactly to your profile.</p>
-                            <Button
-                                onClick={openFreshWizard}
-                                className="rounded-2xl px-12 h-14 text-lg bg-gradient-to-br from-primary to-indigo-600 shadow-2xl shadow-primary/30"
-                            >
-                                Start Free Evaluation
-                            </Button>
+
+                            <div className="xl:col-span-3 py-32 text-center bg-white dark:bg-gray-800 rounded-[3rem] border-2 border-dashed border-gray-100 dark:border-gray-700">
+                                <div className="h-24 w-24 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-8">
+                                    <Sparkles className="h-12 w-12 text-primary animate-pulse" />
+                                </div>
+                                <h2 className="text-3xl font-black mb-4">You haven't run a search yet</h2>
+                                <p className="text-gray-500 mb-10 max-w-md mx-auto">Complete our 6-step wizard to see AI-powered university matches tailored exactly to your profile.</p>
+                                <Button
+                                    onClick={openFreshWizard}
+                                    className="rounded-2xl px-12 h-14 text-lg bg-gradient-to-br from-primary to-indigo-600 shadow-2xl shadow-primary/30"
+                                >
+                                    Start Free Evaluation
+                                </Button>
+                            </div>
                         </div>
                     )}
                 </div>
-
             </div>
 
             {/* Modals */}
@@ -674,46 +410,7 @@ const FindUniversities = () => {
                 universities={comparingItems}
             />
 
-            {/* Local Confirmation Modal for History Deletion */}
-            {sessionToDelete && (
-                <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in">
-                    <div
-                        ref={dialogRef}
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="delete-dialog-title"
-                        aria-describedby="delete-dialog-description"
-                        tabIndex={-1}
-                        className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl max-w-sm w-full mx-4 relative focus:outline-none"
-                    >
-                        <h3 id="delete-dialog-title" className="text-lg font-bold text-gray-900 dark:text-white mb-2">Delete History</h3>
-                        <p id="delete-dialog-description" className="text-sm text-gray-500 mb-6">
-                            Are you sure you want to permanently remove this recommendation history? This action cannot be undone.
-                        </p>
-                        <div className="flex justify-end gap-3">
-                            <Button
-                                variant="outline"
-                                onClick={() => setSessionToDelete(null)}
-                                disabled={deletingSessionId !== null || isDeletingHistory}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                variant="primary"
-                                onClick={handleDeleteConfirm}
-                                disabled={deletingSessionId !== null || isDeletingHistory}
-                                className="bg-red-500 hover:bg-red-600 border-red-500 text-white min-w-[120px]"
-                            >
-                                {deletingSessionId !== null || isDeletingHistory ? (
-                                    <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
-                                ) : (
-                                    "Delete History"
-                                )}
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )}
+
         </div>
     );
 };
