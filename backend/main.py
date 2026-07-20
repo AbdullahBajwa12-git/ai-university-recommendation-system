@@ -3,6 +3,7 @@ import json
 import httpx
 from contextlib import asynccontextmanager
 from typing import List, Optional
+from pydantic import BaseModel
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from beanie import PydanticObjectId
@@ -897,35 +898,154 @@ async def delete_recommendation_history(
 
 # ── AI CHAT ENDPOINT ────────────────────────────────────────────────────────
 
+STUDYROUTE_SYSTEM_PROMPT = """You are StudyRoute Advisor, an AI admissions counselor for StudyRoute — a platform helping South Asian students (especially Pakistani) find and apply to universities worldwide.
+
+Your expertise covers:
+- University admissions: requirements, SOPs, LORs, shortlisting (safety/target/reach), deadlines, intakes
+- Scholarships: Fulbright, Chevening, DAAD, HEC, CSC, Erasmus+, MEXT, university TA/RA funding
+- Tests: IELTS, TOEFL, GRE, GMAT, SAT — scores, prep, validity
+- Visas: F-1 (USA), Student Route (UK), Study Permit (Canada), Schengen, Australian student visa
+- Post-study work rights: OPT/CPT, PSW, PGWP, Graduate Visa
+- Career planning for CS, Data Science, Engineering, Business, Medicine fields
+- StudyRoute platform features: AI matching, profile completion, saved universities, scholarships section
+
+Rules:
+- Be warm, concise, and actionable. Use bullet points for multi-step answers.
+- Use the student's first name if known.
+- Never fabricate deadlines, costs, or requirements. Say "verify on the official website" for specifics.
+- Politely decline questions unrelated to education/career.""".strip()
+
+class ConversationMessage(BaseModel):
+    role: str   # 'user' | 'assistant'
+    content: str
+
+class ChatRequest(BaseModel):
+    message: str
+    history: Optional[List[ConversationMessage]] = []  # previous turns for multi-turn context
+    profile_context: Optional[str] = None              # student's academic profile summary
+
 @app.post("/api/v1/ai/chat", response_model=schemas.ChatResponse)
 async def ai_chat(
-    request: schemas.ChatRequest,
+    request: ChatRequest,
     current_user: models.User = Depends(auth.get_current_user)
 ):
     openai_key = os.getenv("OPENAI_API_KEY", "")
     if not openai_key:
         raise HTTPException(status_code=500, detail="OpenAI API key not configured.")
     try:
+        # Build multi-turn message list
+        system_content = STUDYROUTE_SYSTEM_PROMPT
+
+        # Inject user's name for personalisation if available
+        if current_user.full_name:
+            first_name = current_user.full_name.split()[0]
+            system_content += f"\n\nThe student you are currently helping is named {first_name}."
+
+        # Inject profile context for hyper-personalised responses
+        if request.profile_context:
+            system_content += f"\n\n## STUDENT'S ACADEMIC PROFILE (use this to personalize every answer):\n{request.profile_context}\nWhen the student asks for university recommendations or scholarship eligibility, refer to these specifics directly."
+
+        messages = [{"role": "system", "content": system_content}]
+
+        # Add conversation history (up to last 10 turns to keep cost/latency low)
+        if request.history:
+            for turn in request.history[-10:]:
+                messages.append({"role": turn.role, "content": turn.content})
+
+        # Add the new user message
+        messages.append({"role": "user", "content": request.message})
+
         payload = {
-            "model": "gpt-4o",
-            "messages": [
-                {"role": "system", "content": "You are a professional university admissions counselor."},
-                {"role": "user", "content": request.message}
-            ],
-            "temperature": 0.3,
+            "model": "gpt-4o-mini",
+            "messages": messages,
+            "temperature": 0.5,
+            "max_tokens": 600,      # Tight but sufficient for clear, useful answers
+            "top_p": 0.9,
+            "frequency_penalty": 0.1,
         }
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {openai_key}"
         }
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=25.0) as client:  # 25s hard limit
             resp = await client.post(OPENAI_API_URL, headers=headers, json=payload)
         resp.raise_for_status()
         reply = resp.json()["choices"][0]["message"]["content"]
         return {"reply": reply}
+    except httpx.HTTPStatusError as e:
+        print(f"OpenAI API error {e.response.status_code}: {e.response.text[:200]}")
+        raise HTTPException(status_code=502, detail="The AI service returned an error. Please try again.")
     except Exception as e:
-        print(f"AI chat error: {type(e).__name__}")
+        print(f"AI chat error: {type(e).__name__}: {e}")
         raise HTTPException(status_code=500, detail="The chat service is temporarily unavailable. Please try again.")
+
+
+# ── CHAT SESSION ENDPOINTS ──────────────────────────────────────────────────
+
+@app.post("/api/v1/chat-sessions", response_model=schemas.ChatSessionOut)
+async def save_chat_session(
+    req: schemas.SaveChatSessionRequest,
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """Create or save a new chat session for the current user."""
+    msgs = [
+        models.ChatMessage(role=m["role"], text=m["text"])
+        for m in req.messages
+        if m.get("role") and m.get("text")
+    ]
+    now = datetime.utcnow()
+    session = models.ChatSession(
+        user=current_user,
+        title=req.title or "New Chat",
+        messages=msgs,
+        created_at=now,
+        updated_at=now,
+    )
+    await session.insert()
+    return schemas.ChatSessionOut(
+        id=str(session.id),
+        title=session.title,
+        messages=[schemas.ChatMessageOut(role=m.role, text=m.text, created_at=m.created_at) for m in session.messages],
+        created_at=session.created_at,
+        updated_at=session.updated_at,
+    )
+
+
+@app.get("/api/v1/chat-sessions", response_model=list[schemas.ChatSessionOut])
+async def list_chat_sessions(
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """Return all saved chat sessions for the current user, newest first."""
+    sessions = await models.ChatSession.find(
+        models.ChatSession.user.id == current_user.id  # type: ignore[attr-defined]
+    ).sort(-models.ChatSession.updated_at).to_list()
+    return [
+        schemas.ChatSessionOut(
+            id=str(s.id),
+            title=s.title,
+            messages=[schemas.ChatMessageOut(role=m.role, text=m.text, created_at=m.created_at) for m in s.messages],
+            created_at=s.created_at,
+            updated_at=s.updated_at,
+        )
+        for s in sessions
+    ]
+
+
+@app.delete("/api/v1/chat-sessions/{session_id}")
+async def delete_chat_session(
+    session_id: str,
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """Delete a specific chat session belonging to the current user."""
+    try:
+        session = await models.ChatSession.get(session_id)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if str(session.user.ref.id) != str(current_user.id) and session.user.id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorised")
+    await session.delete()
+    return {"message": "Session deleted"}
+
 
 if __name__ == "__main__":
     import uvicorn

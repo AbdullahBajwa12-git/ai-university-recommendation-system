@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Award, Calendar, ArrowUpRight, Search, Loader2, AlertCircle, GraduationCap, Globe } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Award, Calendar, ArrowUpRight, Search, Loader2, AlertCircle, GraduationCap } from 'lucide-react';
 import scholarshipService from '../../services/scholarshipService';
 
 const Scholarships = () => {
@@ -31,10 +31,10 @@ const Scholarships = () => {
     : scholarships;
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="max-w-[1200px] mx-auto w-full p-8 font-sans pb-20 space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Global Scholarships</h2>
+          <h1 className="text-4xl font-extrabold tracking-tight font-serif text-[#111827] dark:text-white mb-2">Global Scholarships</h1>
           <p className="text-gray-500 mt-1">Funding opportunities curated by our team.</p>
         </div>
       </div>

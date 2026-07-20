@@ -1,28 +1,101 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useForm } from 'react-hook-form';
-import { 
-  X, ChevronRight, ChevronLeft, User, GraduationCap, 
-  MapPin, Globe, DollarSign, Languages, BrainCircuit,
-  Search, CheckCircle2, AlertCircle, RotateCcw
+import {
+  X, Check, Search, ArrowLeft, ArrowRight
 } from 'lucide-react';
-import Button from '../common/Button';
 import Input from '../common/Input';
 import { cn } from '../../utils/cn';
 import { ALL_DESTINATIONS } from '../../constants/studyDestinations';
 
 const STEPS = [
-  { id: 1, title: 'Personal Details', icon: User },
-  { id: 2, title: 'Target Program', icon: BrainCircuit },
-  { id: 3, title: 'Scores', icon: Languages },
-  { id: 4, title: 'Location', icon: MapPin },
-  { id: 5, title: 'Budget', icon: DollarSign },
-  { id: 6, title: 'Review', icon: CheckCircle2 }
+  { id: 1, title: 'Profile' },
+  { id: 2, title: 'Academic' },
+  { id: 3, title: 'Tests' },
+  { id: 4, title: 'Destinations' },
+  { id: 5, title: 'Budget' },
+  { id: 6, title: 'Review' }
 ];
+
+const COUNTRY_CODES = {
+  "Albania": "al", "Andorra": "ad", "Austria": "at", "Belarus": "by", "Belgium": "be",
+  "Bosnia and Herzegovina": "ba", "Bulgaria": "bg", "Croatia": "hr", "Cyprus": "cy",
+  "Czech Republic": "cz", "Denmark": "dk", "Estonia": "ee", "Finland": "fi",
+  "France": "fr", "Germany": "de", "Greece": "gr", "Hungary": "hu", "Iceland": "is",
+  "Ireland": "ie", "Italy": "it", "Kosovo": "xk", "Latvia": "lv", "Liechtenstein": "li",
+  "Lithuania": "lt", "Luxembourg": "lu", "Malta": "mt", "Moldova": "md", "Monaco": "mc",
+  "Montenegro": "me", "Netherlands": "nl", "North Macedonia": "mk", "Norway": "no",
+  "Poland": "pl", "Portugal": "pt", "Romania": "ro", "Russia": "ru", "San Marino": "sm",
+  "Serbia": "rs", "Slovakia": "sk", "Slovenia": "si", "Spain": "es", "Sweden": "se",
+  "Switzerland": "ch", "Ukraine": "ua", "United Kingdom": "gb", "Vatican City": "va",
+  "USA": "us", "Canada": "ca", "Mexico": "mx", "Australia": "au", "New Zealand": "nz",
+  "China": "cn", "Japan": "jp", "South Korea": "kr", "Singapore": "sg", "Malaysia": "my",
+  "UAE": "ae", "Turkey": "tr", "Saudi Arabia": "sa", "Hong Kong": "hk",
+  "South Africa": "za", "Egypt": "eg", "Morocco": "ma", "Ghana": "gh",
+  "Kenya": "ke", "Brazil": "br", "Argentina": "ar", "Chile": "cl", "Colombia": "co",
+  "United Arab Emirates": "ae", "Türkiye": "tr"
+};
+
+const getFlagUrl = (countryName) => {
+  const code = COUNTRY_CODES[countryName];
+  return code ? `/flags/${code}.svg` : null;
+};
+
+const STEP_CONTENT = {
+  1: {
+    stepLabel: 'STEP 1 OF 6 • PERSONAL DETAILS',
+    heading: 'Tell us about yourself',
+    subtext: 'We need some basic information to personalize your search experience.',
+    whyTitle: 'Your profile is your baseline.',
+    whyDesc: 'Universities consider your home country and current level to evaluate your eligibility.',
+    whyPoints: ['Determine eligibility', 'Personalize recommendations', 'Filter irrelevant results']
+  },
+  2: {
+    stepLabel: 'STEP 2 OF 6 • ACADEMIC DIRECTION',
+    heading: 'What would you like to study next?',
+    subtext: 'We use your target qualification and subject to retrieve relevant university and program records before ranking candidates.',
+    whyTitle: 'Your subject changes more than the search label.',
+    whyDesc: 'Program availability, academic prerequisites, tuition and entry evidence can differ within the same university.',
+    whyPoints: ['Retrieve compatible programs', 'Check academic relationships', 'Rank fit and affordability']
+  },
+  3: {
+    stepLabel: 'STEP 3 OF 6 • TEST SCORES',
+    heading: 'What are your test scores?',
+    subtext: 'Language and standardized tests are mandatory for many top universities. Leave blank if not applicable.',
+    whyTitle: 'Scores unlock opportunities.',
+    whyDesc: 'Many institutions have strict cut-offs for language and academic test scores.',
+    whyPoints: ['Verify admission requirements', 'Identify scholarship eligibility', 'Ensure visa compliance']
+  },
+  4: {
+    stepLabel: 'STEP 4 OF 6 • STUDY DESTINATIONS',
+    heading: 'Where do you want to study?',
+    subtext: 'Select specific countries or let us find the best global matches for your profile.',
+    whyTitle: 'Location shapes your experience.',
+    whyDesc: 'Different countries offer varying post-study work rights, living costs, and cultural experiences.',
+    whyPoints: ['Match post-graduation goals', 'Align with living cost budget', 'Consider visa success rates']
+  },
+  5: {
+    stepLabel: 'STEP 5 OF 6 • BUDGET & FUNDING',
+    heading: 'What is your budget?',
+    subtext: 'Tell us about your financial plans so we can match you with affordable options and scholarships.',
+    whyTitle: 'Financial fit is crucial.',
+    whyDesc: 'We want to ensure the recommended universities are realistic for your financial situation.',
+    whyPoints: ['Filter by tuition fees', 'Identify scholarship needs', 'Estimate total investment']
+  },
+  6: {
+    stepLabel: 'FINAL STEP • REVIEW',
+    heading: 'Confirm the profile behind your shortlist.',
+    subtext: 'Review your details before StudyRoute searches, scores and explains the best available matches.',
+    whyTitle: 'Almost there!',
+    whyDesc: 'Our AI will process your criteria and find the best possible university matches.',
+    whyPoints: ['Verify accuracy', 'Ensure completeness', 'Generate tailored results']
+  }
+};
 
 const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialData, prefillSource }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [countrySearch, setCountrySearch] = useState('');
-  const [avoidSearch, setAvoidSearch] = useState('');
+
 
   const defaultVals = {
     full_name: '',
@@ -94,7 +167,7 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
     } else if (currentStep === 2) {
       fieldsToValidate = ['degree_applying_for', 'intended_major'];
     }
-    
+
     if (fieldsToValidate.length > 0) {
       const isValid = await trigger(fieldsToValidate);
       if (!isValid) return;
@@ -106,15 +179,15 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
 
   const handleFormSubmit = (data) => {
     const payload = { ...data };
-    
+
     payload.continents = [];
-    
+
     if (payload.budget_mode === 'total' && payload.total_budget) {
       payload.budget_max = parseFloat(payload.total_budget);
     } else if (payload.budget_mode === 'detailed' && payload.max_course_tuition_fee) {
       payload.budget_max = parseFloat(payload.max_course_tuition_fee);
     }
-    
+
     if (payload.open_to_all_destinations) {
       const avoided = payload.avoid_countries || [];
       payload.countries = ALL_DESTINATIONS.filter(c => !avoided.includes(c));
@@ -124,7 +197,7 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
         payload.countries = ALL_DESTINATIONS;
       }
     }
-    
+
     delete payload.avoid_countries;
     delete payload.open_to_all_destinations;
     delete payload.budget_mode;
@@ -147,7 +220,7 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
     payload.num_research_papers = 0;
     payload.research_experience = "No";
     payload.work_experience = "No";
-    
+
     payload.public_only = false;
     payload.research_focused = false;
     payload.industry_focused = false;
@@ -156,7 +229,7 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
     onSubmit(payload);
   };
 
-  const watchContinents = watch('continents') || [];
+
   const watchCountries = watch('countries') || [];
 
   const toggleItem = (field, value) => {
@@ -173,28 +246,28 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
       case 1:
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-sm font-semibold">Full Name *</label>
-                <Input {...register('full_name', { required: 'Name is required' })} placeholder="Enter your full name" autoComplete="name" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Full Name *</label>
+                <Input {...register('full_name', { required: 'Name is required' })} placeholder="Enter your full name" autoComplete="name" className="h-12" />
                 {errors.full_name && <span className="text-xs text-red-500">{errors.full_name.message}</span>}
               </div>
-              <div className="space-y-1">
-                <label className="text-sm font-semibold">Email *</label>
-                <Input {...register('email', { 
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Email *</label>
+                <Input {...register('email', {
                   required: 'Email is required',
                   pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Invalid email address' }
-                })} type="email" placeholder="email@example.com" autoComplete="email" id="uf_email" />
+                })} type="email" placeholder="email@example.com" autoComplete="email" className="h-12" />
                 {errors.email && <span className="text-xs text-red-500">{errors.email.message}</span>}
               </div>
-              <div className="space-y-1">
-                <label className="text-sm font-semibold">Home Country *</label>
-                <Input {...register('country', { required: 'Country is required' })} placeholder="Your current country" autoComplete="country-name" />
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Home Country *</label>
+                <Input {...register('country', { required: 'Country is required' })} placeholder="Your current country" autoComplete="country-name" className="h-12" />
                 {errors.country && <span className="text-xs text-red-500">{errors.country.message}</span>}
               </div>
-              <div className="space-y-1">
-                <label className="text-sm font-semibold">Current Degree Level *</label>
-                <select {...register('current_degree_level', { required: 'Degree level is required' })} className="w-full h-11 rounded-xl border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Current Degree Level *</label>
+                <select {...register('current_degree_level', { required: 'Degree level is required' })} className="w-full h-12 rounded-xl border border-input bg-background px-4 py-2 text-sm focus:ring-2 focus:ring-primary outline-none">
                   <option value="">-- Select Degree --</option>
                   <option value="Bachelors">Bachelors</option>
                   <option value="Masters">Masters</option>
@@ -203,18 +276,18 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
                 </select>
                 {errors.current_degree_level && <span className="text-xs text-red-500">{errors.current_degree_level.message}</span>}
               </div>
-              <div className="space-y-1">
-                <label className="text-sm font-semibold">Current University</label>
-                <Input {...register('current_university')} placeholder="University Name" autoComplete="off" id="uf_current_university" />
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Current University</label>
+                <Input {...register('current_university')} placeholder="University Name" autoComplete="off" className="h-12" />
               </div>
-              <div className="space-y-1">
-                <label className="text-sm font-semibold">Current CGPA *</label>
-                <Input {...register('cgpa', { required: 'CGPA is required' })} type="number" step="0.01" placeholder="e.g. 3.8" />
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Current CGPA *</label>
+                <Input {...register('cgpa', { required: 'CGPA is required' })} type="number" step="0.01" placeholder="e.g. 3.8" className="h-12" />
                 {errors.cgpa && <span className="text-xs text-red-500">{errors.cgpa.message}</span>}
               </div>
-              <div className="space-y-1">
-                <label className="text-sm font-semibold">Graduation Year</label>
-                <Input {...register('graduation_year')} type="number" placeholder="e.g. 2025" />
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Graduation Year</label>
+                <Input {...register('graduation_year')} type="number" placeholder="e.g. 2025" className="h-12" />
               </div>
             </div>
           </div>
@@ -222,34 +295,24 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
       case 2:
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-lg font-bold">Target Study Level *</label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {['Bachelors', 'Masters', 'MPhil', 'PhD'].map(level => (
-                    <button
-                      key={level}
-                      type="button"
-                      onClick={() => { setValue('degree_applying_for', level); trigger('degree_applying_for'); }}
-                      className={cn(
-                        "p-4 rounded-2xl border-2 transition-all font-bold",
-                        watch('degree_applying_for') === level 
-                          ? "border-primary bg-primary/5 text-primary" 
-                          : "border-gray-100 dark:border-gray-800 hover:border-primary/50"
-                      )}
-                    >
-                      {level}
-                    </button>
-                  ))}
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-700">Target Study Level *</label>
+                  <select {...register('degree_applying_for', { required: 'Target Study Level is required' })} className="w-full h-12 rounded-xl border border-input bg-background px-4 py-2 text-sm focus:ring-2 focus:ring-primary outline-none">
+                    <option value="">-- Select Level --</option>
+                    <option value="Bachelors">Bachelors</option>
+                    <option value="Masters">Masters</option>
+                    <option value="MPhil">MPhil</option>
+                    <option value="PhD">PhD</option>
+                  </select>
+                  {errors.degree_applying_for && <span className="text-xs text-red-500">{errors.degree_applying_for.message}</span>}
                 </div>
-                {/* Hidden input to register degree_applying_for */}
-                <input type="hidden" {...register('degree_applying_for', { required: 'Target Study Level is required' })} />
-                {errors.degree_applying_for && <span className="text-xs text-red-500">{errors.degree_applying_for.message}</span>}
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-semibold">Intended Major / Course *</label>
-                <Input {...register('intended_major', { required: 'Intended major is required' })} placeholder="e.g. Computer Science, Artificial Intelligence" autoComplete="off" id="uf_intended_major" />
-                {errors.intended_major && <span className="text-xs text-red-500">{errors.intended_major.message}</span>}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-700">Intended Major / Course *</label>
+                  <Input {...register('intended_major', { required: 'Intended major is required' })} placeholder="e.g. Computer Science" autoComplete="off" className="h-12" />
+                  {errors.intended_major && <span className="text-xs text-red-500">{errors.intended_major.message}</span>}
+                </div>
               </div>
             </div>
           </div>
@@ -257,152 +320,155 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
       case 3:
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-            <p className="text-sm text-gray-500 italic">Language scores are optional but helpful for accurate recommendations.</p>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <label className="text-sm font-semibold">IELTS</label>
-                <Input {...register('ielts')} type="number" step="0.5" placeholder="0 - 9.0" />
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">IELTS</label>
+                <Input {...register('ielts')} type="number" step="0.5" placeholder="0 - 9.0" className="h-12" />
               </div>
-              <div className="space-y-1">
-                <label className="text-sm font-semibold">TOEFL</label>
-                <Input {...register('toefl')} type="number" placeholder="0 - 120" />
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">TOEFL</label>
+                <Input {...register('toefl')} type="number" placeholder="0 - 120" className="h-12" />
               </div>
-              <div className="space-y-1">
-                <label className="text-sm font-semibold">GRE</label>
-                <Input {...register('gre')} type="number" placeholder="e.g. 310" />
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">GRE</label>
+                <Input {...register('gre')} type="number" placeholder="e.g. 310" className="h-12" />
               </div>
-              <div className="space-y-1">
-                <label className="text-sm font-semibold">GMAT</label>
-                <Input {...register('gmat')} type="number" placeholder="e.g. 680" />
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">GMAT</label>
+                <Input {...register('gmat')} type="number" placeholder="e.g. 680" className="h-12" />
               </div>
-              <div className="space-y-1">
-                <label className="text-sm font-semibold">SAT</label>
-                <Input {...register('sat')} type="number" placeholder="e.g. 1400" />
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">SAT</label>
+                <Input {...register('sat')} type="number" placeholder="e.g. 1400" className="h-12" />
               </div>
             </div>
           </div>
         );
-      case 4:
+      case 4: {
+        const FEATURED = [
+          { name: 'United Kingdom', label: '50+ curated universities' },
+          { name: 'Canada', label: '42 curated universities' },
+          { name: 'Australia', label: '35 curated universities' },
+          { name: 'Germany', label: 'Public & private options' },
+          { name: 'Malaysia', label: 'Regional education hub' },
+          { name: 'UAE', displayName: 'United Arab Emirates', label: 'International campuses' },
+          { name: 'Turkey', displayName: 'Türkiye', label: 'Affordable programs' },
+        ];
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold mb-3">Preferred Study Destinations</label>
-                <div className="flex items-center gap-3 mb-4">
-                  <input type="checkbox" id="open_to_all" {...register('open_to_all_destinations')} className="w-5 h-5 rounded text-primary" />
-                  <label htmlFor="open_to_all" className="text-sm font-medium">I am open to more destinations (Any of the supported destinations)</label>
-                </div>
-                
-                {!watch('open_to_all_destinations') && (
-                  <div className="space-y-2">
-                    <p className="text-xs text-gray-500">Select your preferred countries:</p>
-                    
-                    {watchCountries.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {watchCountries.map(c => (
-                          <span key={c} className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-semibold">
-                            {c}
-                            <button type="button" onClick={(e) => { e.stopPropagation(); toggleItem('countries', c); }} className="hover:text-indigo-900 dark:hover:text-indigo-100">
-                              <X className="h-3 w-3" />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input 
-                        placeholder="Search for a country..." 
-                        value={countrySearch} 
-                        onChange={(e) => setCountrySearch(e.target.value)}
-                        className="pl-9 mb-2"
-                      />
-                    </div>
-                    <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 border rounded-xl">
-                      {ALL_DESTINATIONS
-                        .filter(c => !watchCountries.includes(c) && c.toLowerCase().includes(countrySearch.toLowerCase()))
-                        .map(c => (
-                        <button
-                          key={c} type="button"
-                          onClick={() => { toggleItem('countries', c); setCountrySearch(''); }}
-                          className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-indigo-300"
-                        >
-                          {c}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {watch('open_to_all_destinations') && (
-                  <div className="space-y-2 mt-4">
-                    <p className="text-xs text-red-500 font-semibold">Avoid these countries (Optional):</p>
-                    
-                    {watch('avoid_countries')?.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {watch('avoid_countries').map(c => (
-                          <span key={c} className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-full text-xs font-semibold">
-                            {c}
-                            <button type="button" onClick={(e) => { e.stopPropagation(); toggleItem('avoid_countries', c); }} className="hover:text-red-900 dark:hover:text-red-100">
-                              <X className="h-3 w-3" />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input 
-                        placeholder="Search for a country to avoid..." 
-                        value={avoidSearch} 
-                        onChange={(e) => setAvoidSearch(e.target.value)}
-                        className="pl-9 mb-2"
-                      />
-                    </div>
-                    <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 border border-red-100 dark:border-red-900/50 rounded-xl">
-                      {ALL_DESTINATIONS
-                        .filter(c => !(watch('avoid_countries') || []).includes(c) && c.toLowerCase().includes(avoidSearch.toLowerCase()))
-                        .map(c => (
-                        <button
-                          key={c} type="button"
-                          onClick={() => { toggleItem('avoid_countries', c); setAvoidSearch(''); }}
-                          className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-red-300"
-                        >
-                          {c}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+            <div className="flex gap-4 mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  placeholder="Search destinations"
+                  value={countrySearch}
+                  onChange={(e) => setCountrySearch(e.target.value)}
+                  className="w-full h-14 pl-12 pr-4 rounded-2xl border border-gray-200 bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all text-sm font-medium"
+                />
               </div>
+              <select className="h-14 px-4 pr-8 rounded-2xl border border-gray-200 bg-white text-gray-700 font-medium focus:ring-2 focus:ring-blue-500 outline-none text-sm min-w-[140px]">
+                <option value="all">Region: All</option>
+              </select>
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {FEATURED.map(country => {
+                const isSelected = watchCountries.includes(country.name);
+                return (
+                  <button
+                    key={country.name}
+                    type="button"
+                    onClick={() => toggleItem('countries', country.name)}
+                    className={cn(
+                      "text-left p-5 rounded-2xl border-2 transition-all duration-200 relative group flex flex-col",
+                      isSelected
+                        ? "border-blue-500 bg-white shadow-sm ring-4 ring-blue-500/10"
+                        : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
+                    )}
+                  >
+                    <div className={cn(
+                      "absolute top-4 right-4 h-5 w-5 rounded bg-blue-50 flex items-center justify-center transition-colors",
+                      isSelected ? "text-blue-600" : "text-transparent bg-transparent group-hover:bg-gray-50"
+                    )}>
+                      <Check className="h-3 w-3" />
+                    </div>
+                    <img
+                      src={getFlagUrl(country.name)}
+                      alt={country.displayName || country.name}
+                      className="w-8 h-6 object-cover rounded shadow-sm mb-4 border border-gray-100"
+                      onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }}
+                    />
+                    <h4 className="font-bold text-gray-900 text-sm mb-1">{country.displayName || country.name}</h4>
+                    <p className="text-[11px] text-gray-500 font-medium">{country.label}</p>
+                  </button>
+                );
+              })}
+
+              <button
+                type="button"
+                className="text-center p-5 rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 flex flex-col items-center justify-center min-h-[140px]"
+              >
+                <div className="h-10 w-10 rounded-full bg-white shadow-sm flex items-center justify-center text-blue-600 mb-3 border border-blue-100/50">
+                  <span className="text-xl leading-none font-light">+</span>
+                </div>
+                <h4 className="font-bold text-gray-900 text-[13px]">Explore all 70 destinations</h4>
+              </button>
+            </div>
+
+            {countrySearch && (
+              <div className="mt-6">
+                 <h4 className="text-sm font-bold text-gray-900 mb-4">Other Destinations</h4>
+                 <div className="flex flex-wrap gap-2">
+                   {ALL_DESTINATIONS
+                     .filter(c => !FEATURED.find(f => f.name === c) && c.toLowerCase().includes(countrySearch.toLowerCase()))
+                     .map(c => {
+                       const isSelected = watchCountries.includes(c);
+                       return (
+                         <button
+                           key={c} type="button"
+                           onClick={() => toggleItem('countries', c)}
+                           className={cn(
+                             "px-4 py-2 rounded-xl text-sm font-medium transition-all border",
+                             isSelected
+                               ? "bg-blue-50 border-blue-500 text-blue-700 shadow-sm ring-2 ring-blue-500/20"
+                               : "bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 text-gray-700"
+                           )}
+                         >
+                           <div className="flex items-center gap-2">
+                             {isSelected && <Check className="w-3 h-3" />}
+                             {c}
+                           </div>
+                         </button>
+                       );
+                     })}
+                 </div>
+              </div>
+            )}
           </div>
         );
+      }
       case 5:
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="space-y-4">
+            <div className="space-y-8">
               <div>
-                <label className="block text-sm font-bold mb-3">Budget Preferences</label>
-                
-                <div className="flex gap-4 mb-4">
-                  <label className="flex items-center gap-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-4">Budget Mode</label>
+                <div className="flex gap-4 mb-6">
+                  <label className="flex items-center justify-center gap-3 p-4 flex-1 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors">
                     <input type="radio" value="total" {...register('budget_mode')} className="w-4 h-4 text-primary" />
-                    <span className="text-sm">Total Budget</span>
+                    <span className="text-sm font-medium">Total Budget</span>
                   </label>
-                  <label className="flex items-center gap-2">
+                  <label className="flex items-center justify-center gap-3 p-4 flex-1 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors">
                     <input type="radio" value="detailed" {...register('budget_mode')} className="w-4 h-4 text-primary" />
-                    <span className="text-sm">Detailed Budget</span>
+                    <span className="text-sm font-medium">Detailed Budget</span>
                   </label>
                 </div>
 
                 {watch('budget_mode') === 'total' ? (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold">Currency</label>
-                      <select {...register('currency')} className="w-full p-2 rounded-lg border border-input text-sm bg-background">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700">Currency</label>
+                      <select {...register('currency')} className="w-full h-12 rounded-xl border border-input bg-background px-4 text-sm focus:ring-2 focus:ring-primary outline-none">
                         <option value="USD">USD ($)</option>
                         <option value="EUR">EUR (€)</option>
                         <option value="GBP">GBP (£)</option>
@@ -411,23 +477,23 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
                         <option value="AUD">AUD ($)</option>
                       </select>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold">Total Budget Amount</label>
-                      <Input {...register('total_budget')} type="number" placeholder="e.g. 50000" />
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700">Total Budget Amount</label>
+                      <Input {...register('total_budget')} type="number" placeholder="e.g. 50000" className="h-12" />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold">Period</label>
-                      <select {...register('budget_period')} className="w-full p-2 rounded-lg border border-input text-sm bg-background">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700">Period</label>
+                      <select {...register('budget_period')} className="w-full h-12 rounded-xl border border-input bg-background px-4 text-sm focus:ring-2 focus:ring-primary outline-none">
                         <option value="per_year">Per Year</option>
                         <option value="full_degree">Full Degree</option>
                       </select>
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold">Currency</label>
-                      <select {...register('currency')} className="w-full p-2 rounded-lg border border-input text-sm bg-background">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700">Currency</label>
+                      <select {...register('currency')} className="w-full h-12 rounded-xl border border-input bg-background px-4 text-sm focus:ring-2 focus:ring-primary outline-none">
                         <option value="USD">USD ($)</option>
                         <option value="EUR">EUR (€)</option>
                         <option value="GBP">GBP (£)</option>
@@ -436,27 +502,27 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
                         <option value="AUD">AUD ($)</option>
                       </select>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold">Max Tuition Fee</label>
-                      <Input {...register('max_course_tuition_fee')} type="number" placeholder="e.g. 30000" />
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700">Max Tuition Fee</label>
+                      <Input {...register('max_course_tuition_fee')} type="number" placeholder="e.g. 30000" className="h-12" />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold">Max Application Fee</label>
-                      <Input {...register('max_application_fee')} type="number" placeholder="e.g. 100" />
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700">Max Application Fee</label>
+                      <Input {...register('max_application_fee')} type="number" placeholder="e.g. 100" className="h-12" />
                     </div>
                   </div>
                 )}
               </div>
-              
-              <div className="pt-4 border-t border-dashed">
-                <label className="block text-sm font-bold mb-3">Financial Needs</label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-800 cursor-pointer">
-                    <input type="checkbox" {...register('need_scholarship')} className="w-4 h-4 rounded text-primary" />
+
+              <div className="pt-6 border-t border-gray-100">
+                <label className="block text-sm font-semibold text-gray-700 mb-4">Financial Needs</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors">
+                    <input type="checkbox" {...register('need_scholarship')} className="w-5 h-5 rounded text-primary" />
                     <span className="text-sm font-medium">Need Scholarship?</span>
                   </label>
-                  <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-800 cursor-pointer">
-                    <input type="checkbox" {...register('fully_funded_required')} className="w-4 h-4 rounded text-primary" />
+                  <label className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors">
+                    <input type="checkbox" {...register('fully_funded_required')} className="w-5 h-5 rounded text-primary" />
                     <span className="text-sm font-medium">Fully Funded Required?</span>
                   </label>
                 </div>
@@ -466,68 +532,100 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
         );
       case 6:
         return (
-          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 text-left">
-            <h3 className="font-bold text-lg">Review Information</h3>
-            
-            <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-100 dark:border-gray-700 text-sm space-y-4">
-              
-              <div>
-                <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Personal & Academic</h4>
-                <div className="grid grid-cols-2 gap-y-2 gap-x-4">
-                  <div><span className="text-gray-500">Name:</span> {watch('full_name') || 'N/A'}</div>
-                  <div><span className="text-gray-500">Email:</span> {watch('email') || 'N/A'}</div>
-                  <div><span className="text-gray-500">Home Country:</span> {watch('country') || 'N/A'}</div>
-                  <div><span className="text-gray-500">Current Level:</span> {watch('current_degree_level') || 'N/A'}</div>
-                  <div><span className="text-gray-500">Current Uni:</span> {watch('current_university') || 'N/A'}</div>
-                  <div><span className="text-gray-500">CGPA:</span> {watch('cgpa') || 'N/A'}</div>
-                  <div><span className="text-gray-500">Grad Year:</span> {watch('graduation_year') || 'N/A'}</div>
-                </div>
-              </div>
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-2">
-                <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Target Program</h4>
-                <div className="grid grid-cols-2 gap-y-2 gap-x-4">
-                  <div><span className="text-gray-500">Degree:</span> {watch('degree_applying_for') || 'N/A'}</div>
-                  <div><span className="text-gray-500">Major:</span> {watch('intended_major') || 'N/A'}</div>
-                </div>
-              </div>
-
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-2">
-                <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Location & Financials</h4>
-                <div className="grid grid-cols-1 gap-y-2">
+              {/* Card 1 */}
+              <div className="bg-white border border-gray-200 rounded-[1.5rem] p-6 relative group hover:border-gray-300 transition-colors">
+                <button type="button" onClick={() => setCurrentStep(1)} className="absolute top-6 right-6 text-xs font-bold text-blue-600 hover:text-blue-800">Edit</button>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-bold flex items-center justify-center text-lg">01</div>
                   <div>
-                    <span className="text-gray-500">Destinations:</span> {
-                      watch('open_to_all_destinations') ? "Open to all supported" : (watchCountries.length ? watchCountries.join(", ") : "None selected")
-                    }
+                    <h4 className="font-bold text-gray-900 text-lg">Academic profile</h4>
+                    <p className="text-xs text-gray-500">Evidence used for eligibility</p>
                   </div>
-                  {watch('open_to_all_destinations') && watch('avoid_countries')?.length > 0 && (
-                    <div><span className="text-gray-500">Avoiding:</span> {watch('avoid_countries').join(", ")}</div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center"><span className="text-xs text-gray-500">Qualification</span><span className="text-sm font-bold text-gray-900">{watch('current_degree_level') || '—'} {watch('intended_major') || ''}</span></div>
+                  <div className="flex justify-between items-center"><span className="text-xs text-gray-500">CGPA</span><span className="text-sm font-bold text-gray-900">{watch('cgpa') || '—'} / 4.00</span></div>
+                  <div className="flex justify-between items-center"><span className="text-xs text-gray-500">Backlogs</span><span className="text-sm font-bold text-gray-900">None</span></div>
+                </div>
+              </div>
+
+              {/* Card 2 */}
+              <div className="bg-white border border-gray-200 rounded-[1.5rem] p-6 relative group hover:border-gray-300 transition-colors">
+                <button type="button" onClick={() => setCurrentStep(2)} className="absolute top-6 right-6 text-xs font-bold text-blue-600 hover:text-blue-800">Edit</button>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 font-bold flex items-center justify-center text-lg">02</div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-lg">Target study</h4>
+                    <p className="text-xs text-gray-500">Degree and subject fit</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center"><span className="text-xs text-gray-500">Degree</span><span className="text-sm font-bold text-gray-900">{watch('degree_applying_for') || '—'}</span></div>
+                  <div className="flex justify-between items-center"><span className="text-xs text-gray-500">Major</span><span className="text-sm font-bold text-gray-900">{watch('intended_major') || '—'}</span></div>
+                  <div className="flex justify-between items-center"><span className="text-xs text-gray-500">Intake</span><span className="text-sm font-bold text-gray-900">September 2027</span></div>
+                </div>
+              </div>
+
+              {/* Card 3 */}
+              <div className="bg-white border border-gray-200 rounded-[1.5rem] p-6 relative group hover:border-gray-300 transition-colors">
+                <button type="button" onClick={() => setCurrentStep(3)} className="absolute top-6 right-6 text-xs font-bold text-blue-600 hover:text-blue-800">Edit</button>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-full bg-yellow-50 text-yellow-600 font-bold flex items-center justify-center text-lg">03</div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-lg">Tests and language</h4>
+                    <p className="text-xs text-gray-500">Submitted evidence</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {watch('ielts') ? <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold border border-blue-100">IELTS {watch('ielts')}</span> : <span className="px-3 py-1 bg-gray-50 text-gray-500 rounded-full text-xs font-bold border border-gray-200">No IELTS</span>}
+                  {watch('gre') ? <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs font-bold border border-emerald-100">GRE {watch('gre')}</span> : <span className="px-3 py-1 bg-gray-50 text-gray-500 rounded-full text-xs font-bold border border-gray-200">No GRE</span>}
+                  {watch('gmat') ? <span className="px-3 py-1 bg-gray-50 text-gray-700 rounded-full text-xs font-bold border border-gray-200">GMAT {watch('gmat')}</span> : <span className="px-3 py-1 bg-gray-50 text-gray-500 rounded-full text-xs font-bold border border-gray-200">No GMAT</span>}
+                </div>
+                <p className="text-[11px] text-gray-400">Official evidence can be updated later from your profile.</p>
+              </div>
+
+              {/* Card 4 */}
+              <div className="bg-white border border-gray-200 rounded-[1.5rem] p-6 relative group hover:border-gray-300 transition-colors">
+                <button type="button" onClick={() => setCurrentStep(5)} className="absolute top-6 right-6 text-xs font-bold text-blue-600 hover:text-blue-800">Edit</button>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-full bg-pink-50 text-pink-600 font-bold flex items-center justify-center text-lg">04</div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-lg">Budget and funding</h4>
+                    <p className="text-xs text-gray-500">Affordability context</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center"><span className="text-xs text-gray-500">Annual tuition</span><span className="text-sm font-bold text-gray-900">≤ {watch('currency') || 'USD'} {watch('budget_mode') === 'total' ? watch('total_budget') : watch('max_course_tuition_fee')}</span></div>
+                  <div className="flex justify-between items-center"><span className="text-xs text-gray-500">Scholarship</span><span className={cn("text-sm font-bold", watch('need_scholarship') ? "text-orange-600" : "text-gray-900")}>{watch('need_scholarship') ? 'Required' : 'Not required'}</span></div>
+                  <div className="flex justify-between items-center"><span className="text-xs text-gray-500">Funding</span><span className="text-sm font-bold text-gray-900">{watch('need_scholarship') ? 'Family + scholarship' : 'Family / Self-funded'}</span></div>
+                </div>
+              </div>
+
+              {/* Card 5 Full Width */}
+              <div className="bg-white border border-gray-200 rounded-[1.5rem] p-6 relative group hover:border-gray-300 transition-colors md:col-span-2">
+                <button type="button" onClick={() => setCurrentStep(4)} className="absolute top-6 right-6 text-xs font-bold text-blue-600 hover:text-blue-800">Edit</button>
+                <div className="mb-4">
+                  <h4 className="font-bold text-gray-900 text-lg">Preferred destinations</h4>
+                  <p className="text-xs text-gray-500">The search may include exceptional alternatives when enabled.</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  {watchCountries.map(c => (
+                    <div key={c} className="flex items-center gap-2 px-4 py-2 bg-blue-50/50 rounded-xl border border-blue-100/50">
+                      <img src={getFlagUrl(c)} alt={c} className="w-5 h-3.5 object-cover rounded-sm shadow-sm" onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />
+                      <span className="text-sm font-bold text-blue-900">{c === 'UAE' ? 'United Arab Emirates' : c === 'Turkey' ? 'Türkiye' : c}</span>
+                    </div>
+                  ))}
+                  {watch('open_to_all_destinations') && (
+                    <div className="px-4 py-2 bg-white border border-gray-200 rounded-xl flex items-center gap-2 text-sm font-bold text-gray-700">
+                      <span className="text-gray-400">+</span> Strong alternatives enabled
+                    </div>
                   )}
-                  <div>
-                    <span className="text-gray-500">Budget:</span> {
-                      watch('budget_mode') === 'total' && watch('total_budget') ? `${watch('total_budget')} ${watch('currency')} (${watch('budget_period')})` :
-                      watch('budget_mode') === 'detailed' && watch('max_course_tuition_fee') ? `Max Tuition: ${watch('max_course_tuition_fee')} ${watch('currency')}` :
-                      "Not specified"
-                    }
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Funding Needed:</span> {
-                      watch('fully_funded_required') ? "Fully Funded" : (watch('need_scholarship') ? "Scholarship Needed" : "No Preference")
-                    }
-                  </div>
                 </div>
               </div>
 
-            </div>
-            
-            <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30 flex items-start gap-4">
-              <div className="h-8 w-8 shrink-0 rounded-full bg-blue-500 flex items-center justify-center text-white mt-1">
-                <BrainCircuit className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm font-black text-blue-600 uppercase tracking-widest mb-1">AI Match Processing</p>
-                <p className="text-xs text-blue-800/70 dark:text-blue-300">Submit to securely match against our database. The AI will strictly follow your criteria and verify program availability.</p>
-              </div>
             </div>
           </div>
         );
@@ -536,132 +634,307 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      
-      <div className="relative bg-white dark:bg-gray-900 w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row border border-gray-200/20">
-        
-        {/* Sidebar Navigation */}
-        <div className="hidden md:flex w-64 bg-gray-50 dark:bg-gray-800/50 p-8 border-r border-gray-100 dark:border-gray-800 flex-col">
-          <div className="mb-8">
-            <h2 className="text-2xl font-black bg-gradient-to-br from-indigo-500 to-purple-500 bg-clip-text text-transparent italic">UniFinder AI</h2>
-            <p className="text-[10px] uppercase tracking-widest font-black text-gray-400 mt-1">Smart Match System</p>
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] bg-[#fcfcfc] flex flex-col overflow-hidden animate-in fade-in duration-300">
+
+      {/* Top Gradient Bar */}
+      <div className="h-2 w-full bg-gradient-to-r from-blue-500 via-emerald-400 to-yellow-400" />
+
+      {/* Header NavBar */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200/80 bg-white shadow-sm shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 bg-gray-900 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-md">
+            S
           </div>
-          
-          <div className="space-y-4 flex-1">
-            {STEPS.map(step => (
-              <div key={step.id} className={cn(
-                "flex items-center gap-3 p-3 rounded-2xl transition-all",
-                currentStep === step.id 
-                  ? "bg-white dark:bg-gray-700 shadow-md shadow-gray-200/50 dark:shadow-none translate-x-2" 
-                  : "opacity-40"
-              )}>
-                <div className={cn(
-                  "p-2 rounded-xl",
-                  currentStep === step.id ? "bg-primary text-white" : "bg-gray-200 dark:bg-gray-800"
-                )}>
-                  <step.icon className="h-4 w-4" />
-                </div>
-                <span className={cn("text-sm font-bold", currentStep === step.id ? "text-gray-900 dark:text-white" : "text-gray-500 line-through decoration-transparent")}>
-                  {step.title}
-                </span>
-                {currentStep > step.id && <CheckCircle2 className="h-4 w-4 text-emerald-500 ml-auto" />}
-              </div>
-            ))}
-          </div>
-          
-          <div className="mt-auto">
-            <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20">
-              <p className="text-[10px] font-black text-indigo-500 uppercase mb-1">Progress</p>
-              <div className="h-1.5 w-full bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-indigo-500 transition-all duration-500" 
-                  style={{ width: `${(currentStep / STEPS.length) * 100}%` }}
-                />
-              </div>
-            </div>
-          </div>
+          <span className="font-black text-xl tracking-tight text-gray-900">StudyRoute</span>
         </div>
 
-        {/* Content Area */}
-        <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-gray-900">
-          <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
-            <div>
-              <h3 className="text-xl font-bold">{STEPS[currentStep-1].title}</h3>
-              <p className="text-xs text-gray-500">Step {currentStep} of {STEPS.length}</p>
+        <div className="flex items-center gap-2 md:gap-4 hidden lg:flex">
+          {STEPS.map((step, index) => {
+            const isCompleted = currentStep > step.id;
+            const isCurrent = currentStep === step.id;
+            return (
+              <React.Fragment key={step.id}>
+                <div className="flex items-center gap-2">
+                  <div className={cn(
+                    "h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300",
+                    isCompleted ? "bg-emerald-500 text-white shadow-sm" :
+                    isCurrent ? "bg-blue-600 text-white shadow-md ring-4 ring-blue-600/20" : "bg-gray-100 text-gray-400"
+                  )}>
+                    {isCompleted ? <Check className="h-4 w-4" /> : step.id}
+                  </div>
+                  <span className={cn(
+                    "text-sm font-bold transition-colors hidden xl:block",
+                    isCurrent ? "text-gray-900" : "text-gray-400"
+                  )}>
+                    {step.title}
+                  </span>
+                </div>
+                {index < STEPS.length - 1 && (
+                  <div className={cn(
+                    "h-[2px] w-8 xl:w-16 transition-colors duration-300 rounded-full",
+                    isCompleted ? "bg-emerald-500" : "bg-gray-200"
+                  )} />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+
+        <button
+          onClick={onClose}
+          className="px-6 py-2.5 rounded-full border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
+        >
+          Save & exit
+        </button>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-[1400px] mx-auto w-full flex flex-col lg:flex-row gap-8 xl:gap-16 p-6 lg:p-12 min-h-full">
+
+          {/* Left Column (Main Form) */}
+          <div className="flex-1 flex flex-col min-w-0">
+
+            {/* Step Header */}
+            <div className="mb-10 flex items-end justify-between gap-4">
+              <div>
+                <h4 className="text-blue-600 font-bold text-xs tracking-[0.2em] uppercase mb-4">
+                  {STEP_CONTENT[currentStep].stepLabel}
+                </h4>
+                <h2 className="text-4xl lg:text-5xl font-black text-gray-900 mb-4 font-serif tracking-tight">
+                  {STEP_CONTENT[currentStep].heading}
+                </h2>
+                <p className="text-gray-500 text-lg lg:text-xl max-w-3xl leading-relaxed">
+                  {STEP_CONTENT[currentStep].subtext}
+                </p>
+              </div>
+              {currentStep === 4 && watchCountries.length > 0 && (
+                <div className="hidden md:flex bg-blue-50 text-blue-600 px-4 py-2 rounded-xl text-sm font-bold border border-blue-100 whitespace-nowrap mb-2">
+                  {watchCountries.length} selected
+                </div>
+              )}
             </div>
-            <button 
-              onClick={onClose}
-              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
+
+            {/* Form Area */}
+            <form onSubmit={handleSubmit(handleFormSubmit)} className="flex-1 flex flex-col pb-12">
+              <div className="bg-white rounded-[2rem] p-8 lg:p-10 border border-gray-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-8">
+                {renderStep()}
+              </div>
+
+              {/* Alert for prefilled data */}
+              {prefillSource && currentStep === 1 && (
+                 <div className="bg-emerald-50/80 border border-emerald-100 p-5 rounded-2xl flex items-start gap-4 mb-8">
+                   <div className="bg-emerald-100 p-2 rounded-full shrink-0">
+                     <Check className="h-5 w-5 text-emerald-600" />
+                   </div>
+                   <div>
+                     <p className="font-bold text-emerald-900 text-sm mb-1">Profile data applied</p>
+                     <p className="text-sm text-emerald-700/80">
+                       {prefillSource === 'profile'
+                         ? 'We pre-filled this form using your saved profile data.'
+                         : 'We restored your previous search preferences.'}
+                     </p>
+                   </div>
+                 </div>
+              )}
+
+              {/* Bottom Nav */}
+              {currentStep !== 6 && (
+                <div className="flex items-center justify-between mt-auto">
+                  <button
+                    type="button"
+                    onClick={currentStep === 1 ? onClose : prevStep}
+                    disabled={isLoading}
+                    className="flex items-center gap-2 px-8 py-4 rounded-full border-2 border-gray-200 text-gray-700 font-bold hover:bg-gray-50 hover:border-gray-300 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <ArrowLeft className="h-5 w-5" /> Back
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={nextStep}
+                    disabled={isLoading}
+                    className="flex items-center gap-3 px-10 py-4 rounded-full bg-gradient-to-r from-blue-600 to-emerald-500 text-white font-bold text-lg shadow-xl shadow-blue-500/20 hover:shadow-2xl hover:scale-[1.02] transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    Continue to {STEPS[currentStep]?.title?.toLowerCase() || 'next'} <ArrowRight className="h-5 w-5" />
+                  </button>
+                </div>
+              )}
+            </form>
+
+            <div className="mt-auto pt-8 border-t border-gray-200/60 pb-8">
+              <p className="text-xs font-black tracking-widest text-gray-400 uppercase">StudyRoute UniFinder</p>
+            </div>
           </div>
 
-          {/* Pre-fill banner — source-aware (search history vs saved profile/preferences) */}
-          {initialData && (
-            <div className="mx-6 mt-4 flex items-center gap-3 px-4 py-3 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 animate-in fade-in slide-in-from-top-2 duration-300">
-              <div className="h-8 w-8 shrink-0 rounded-full bg-indigo-500 flex items-center justify-center text-white">
-                <RotateCcw className="h-4 w-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-black text-indigo-700 dark:text-indigo-300">
-                  {prefillSource === 'profile'
-                    ? 'Some fields were pre-filled from your saved profile/preferences'
-                    : 'Form pre-filled from your search history'}
-                </p>
-                <p className="text-[10px] text-indigo-500 dark:text-indigo-400 mt-0.5">Review the details across all steps, then submit to get fresh recommendations.</p>
-              </div>
-            </div>
-          )}
+          {/* Right Column (Cards) */}
+          <div className="w-full lg:w-[380px] shrink-0 space-y-6 lg:mt-[132px]">
+            {currentStep === 6 ? (
+              <>
+                <div className="bg-[#182a3d] rounded-[2.5rem] p-8 lg:p-10 text-white shadow-2xl relative overflow-hidden">
+                  <div className="absolute top-20 right-10 w-32 h-32 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+                  <div className="relative z-10">
+                    <h4 className="text-emerald-400 font-bold text-[10px] tracking-widest uppercase mb-6">Ready to discover</h4>
+                    <h3 className="text-3xl font-black mb-4 font-serif leading-tight">
+                      Generate a controlled, explainable shortlist.
+                    </h3>
+                    <p className="text-blue-100/70 text-xs mb-8 pb-8 border-b border-white/10 leading-relaxed">
+                      StudyRoute retrieves records first, ranks a candidate pool, then uses AI only for bounded selection and explanation.
+                    </p>
+                    <div className="space-y-4 mb-8">
+                      <div className="flex items-center gap-3">
+                        <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span className="text-xs text-white/90">Database candidate retrieval</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span className="text-xs text-white/90">Deterministic scoring</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span className="text-xs text-white/90">AI candidate validation</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span className="text-xs text-white/90">Official fact hydration</span>
+                      </div>
+                    </div>
 
-          <form onSubmit={handleSubmit(handleFormSubmit)} className="flex-1 flex flex-col p-8 overflow-y-auto custom-scrollbar">
-            <div key={`wizard-step-${currentStep}`}>
-              {renderStep()}
-            </div>
-          </form>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const isValid = await trigger();
+                        if (isValid) handleSubmit(handleFormSubmit)();
+                      }}
+                      disabled={isLoading}
+                      className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-emerald-500 text-white font-bold text-sm shadow-xl shadow-blue-500/20 hover:shadow-2xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                      Generate my shortlist &rarr;
+                    </button>
+                    <p className="text-center text-[10px] text-white/50 mt-4">Usually takes 20-40 seconds</p>
+                  </div>
+                </div>
 
-          <div className="p-6 border-t border-gray-100 dark:border-gray-800 flex justify-between bg-gray-50 dark:bg-gray-800/20">
-            <Button 
-                type="button"
-                variant="outline" 
-                onClick={prevStep}
-                disabled={currentStep === 1 || isLoading}
-                className="gap-2 rounded-2xl px-8"
-              >
-              <ChevronLeft className="h-4 w-4" /> Back
-            </Button>
-            
-            {currentStep === STEPS.length ? (
-              <Button 
-                type="button"
-                className="gap-2 rounded-2xl px-12 bg-gradient-to-br from-indigo-500 to-purple-600 border-none hover:shadow-indigo-500/30"
-                onClick={async () => {
-                  const isValid = await trigger();
-                  if (isValid) handleSubmit(handleFormSubmit)();
-                }}
-                isLoading={isLoading}
-              >
-                Generate My Recommendations <Sparkles className="h-4 w-4" />
-              </Button>
+                <div className="bg-amber-50 rounded-[2rem] p-6 border border-amber-100">
+                  <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-lg text-[10px] font-bold tracking-widest uppercase mb-4 inline-block">Important</span>
+                  <p className="text-xs text-amber-900/80 leading-relaxed font-medium">
+                    Results support shortlisting and do not guarantee admission, funding or visa outcomes.
+                  </p>
+                </div>
+              </>
+            ) : currentStep === 4 ? (
+              <>
+                {/* Step 4: Selected Route Card */}
+                <div className="bg-white rounded-[2.5rem] p-8 lg:p-10 border border-gray-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                  <h4 className="text-blue-600 font-bold text-[10px] tracking-widest uppercase mb-4">Selected Route</h4>
+                  <h3 className="text-xl font-black text-gray-900 mb-6 font-serif">Your preferred countries</h3>
+
+                  <div className="space-y-2 mb-8">
+                    {watchCountries.length === 0 ? (
+                      <p className="text-sm text-gray-400 italic">No countries selected yet.</p>
+                    ) : (
+                      watchCountries.map(c => (
+                        <div key={c} className="flex items-center justify-between p-3 rounded-xl border border-blue-100/60 bg-blue-50/30 group hover:bg-blue-50/80 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <img src={getFlagUrl(c)} alt={c} className="w-6 h-4 object-cover rounded-sm shadow-sm border border-gray-200/50" onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />
+                            <span className="text-sm font-bold text-blue-900">{c === 'UAE' ? 'United Arab Emirates' : c === 'Turkey' ? 'Türkiye' : c}</span>
+                          </div>
+                          <button type="button" onClick={() => toggleItem('countries', c)} className="text-blue-300 hover:text-blue-600 transition-colors bg-white hover:bg-blue-100 rounded p-1">
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <div className="relative flex items-center justify-center mt-0.5 shrink-0">
+                      <input type="checkbox" {...register('open_to_all_destinations')} className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600" />
+                    </div>
+                    <div>
+                      <span className="text-sm font-bold text-gray-900 block mb-1 group-hover:text-blue-600 transition-colors">Include strong matches elsewhere</span>
+                      <span className="text-[11px] text-gray-500 block leading-tight">We may show compelling alternatives outside your preferred list.</span>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Step 4: Image Card */}
+                <div className="rounded-[2.5rem] p-8 lg:p-10 text-white shadow-2xl relative overflow-hidden h-64 flex flex-col justify-end bg-gray-900">
+                  <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-40 mix-blend-overlay" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#182a3d] via-[#182a3d]/80 to-transparent" />
+                  <div className="relative z-10">
+                    <h4 className="text-blue-300 font-bold text-[9px] tracking-widest uppercase mb-3">Better Discovery</h4>
+                    <h3 className="text-xl font-black mb-2 font-serif leading-tight">
+                      Preferences guide the search. They do not trap it.
+                    </h3>
+                    <p className="text-gray-300/80 text-[11px]">
+                      You remain in control of every final decision.
+                    </p>
+                  </div>
+                </div>
+              </>
             ) : (
-              <Button 
-                type="button"
-                className="gap-2 rounded-2xl px-12"
-                onClick={nextStep}
-                disabled={isLoading}
-              >
-                Next Step <ChevronRight className="h-4 w-4" />
-              </Button>
+              <>
+                {/* Why we ask this (Other Steps) */}
+                <div className="bg-[#182a3d] rounded-[2.5rem] p-8 lg:p-10 text-white shadow-2xl relative overflow-hidden">
+                  <div className="absolute -top-20 -right-20 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
+                  <div className="relative z-10">
+                    <h4 className="text-blue-400 font-bold text-[10px] tracking-widest uppercase mb-6">Why we ask this</h4>
+                    <h3 className="text-3xl font-black mb-4 font-serif leading-tight">
+                      {STEP_CONTENT[currentStep].whyTitle}
+                    </h3>
+                    <p className="text-blue-100/70 text-sm mb-8 pb-8 border-b border-white/10 leading-relaxed">
+                      {STEP_CONTENT[currentStep].whyDesc}
+                    </p>
+                    <div className="space-y-5">
+                      {STEP_CONTENT[currentStep].whyPoints.map((pt, i) => (
+                        <div key={i} className="flex items-start gap-4">
+                          <div className="h-7 w-7 rounded-full bg-white/10 flex items-center justify-center text-white shrink-0 mt-0.5">
+                            <span className="text-[10px] font-black">{String(i + 1).padStart(2, '0')}</span>
+                          </div>
+                          <span className="text-sm font-medium text-white/90 leading-snug">{pt}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Search Summary (Other Steps) */}
+                <div className="bg-white rounded-[2.5rem] p-8 lg:p-10 border border-gray-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                  <h4 className="text-blue-600 font-bold text-[10px] tracking-widest uppercase mb-8">Search Summary</h4>
+                  <div className="space-y-5">
+                    <div className="flex justify-between items-center pb-4 border-b border-gray-100">
+                      <span className="text-sm font-medium text-gray-500">Qualification</span>
+                      <span className="text-sm font-bold text-gray-900">{watch('degree_applying_for') || '—'}</span>
+                    </div>
+                    <div className="flex justify-between items-center pb-4 border-b border-gray-100">
+                      <span className="text-sm font-medium text-gray-500">Subject</span>
+                      <span className="text-sm font-bold text-gray-900 truncate max-w-[180px]">{watch('intended_major') || '—'}</span>
+                    </div>
+                    <div className="flex justify-between items-center pb-4 border-b border-gray-100">
+                      <span className="text-sm font-medium text-gray-500">Destinations</span>
+                      <span className="text-sm font-bold text-gray-900 truncate max-w-[180px]">
+                        {watch('open_to_all_destinations') ? 'Any' : (watch('countries')?.length ? watch('countries').join(', ') : '—')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-500">Budget</span>
+                      <span className="text-sm font-bold text-gray-900">
+                        {watch('budget_mode') === 'total' && watch('total_budget') ? `${watch('currency')} ${watch('total_budget')}` : '—'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </div>
       </div>
     </div>
   );
-};
 
-const Sparkles = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1-1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M3 5h4"/><path d="M21 17v4"/><path d="M19 19h4"/></svg>;
+  return createPortal(modalContent, document.body);
+};
 
 export default UniversityFinderModal;

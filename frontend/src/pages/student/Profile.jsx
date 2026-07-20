@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -108,10 +108,10 @@ const Profile = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-12">
+    <div className="max-w-[1200px] mx-auto w-full p-8 font-sans pb-20 space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Academic Profile</h2>
+          <h1 className="text-4xl font-extrabold tracking-tight font-serif text-[#111827] dark:text-white mb-2">Academic Profile</h1>
           <p className="text-sm text-gray-500 mt-1">Keep your scores updated for accurate admission predictions.</p>
         </div>
         <Button onClick={handleSubmit(onSubmit)} disabled={saving} className="gap-2">

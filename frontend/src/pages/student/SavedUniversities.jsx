@@ -49,7 +49,7 @@ const SavedUniversities = () => {
     <div className="max-w-[1200px] mx-auto w-full p-8 font-sans pb-20">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-4xl font-black tracking-tight bg-gradient-to-br from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent mb-2">
+          <h1 className="text-4xl font-extrabold tracking-tight font-serif text-[#111827] dark:text-white mb-2">
             Saved and Compare
           </h1>
           <p className="text-gray-500 text-lg">View your bookmarked universities and compare them side by side.</p>

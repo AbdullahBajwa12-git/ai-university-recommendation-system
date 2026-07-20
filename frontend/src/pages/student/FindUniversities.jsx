@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Sparkles, Search,
     Download, FileText,
@@ -13,6 +13,7 @@ import Button from '../../components/common/Button';
 import profileService from '../../services/profileService';
 import { jsPDF } from 'jspdf';
 import { saveAs } from 'file-saver';
+import { cn } from '../../utils/cn';
 // Maps saved StudentProfile/Preferences fields → wizard form field names.
 // Only returns keys that have a usable value, so it merges over defaults
 // without clobbering anything with null/empty.
@@ -85,6 +86,14 @@ const FindUniversities = () => {
     const [viewMode, setViewMode] = useState('new'); // 'new', 'history', 'saved'
     const [prefillData, setPrefillData] = useState(null);  // form data from history/profile
     const [prefillSource, setPrefillSource] = useState(null); // 'profile' | 'history' | null
+    const [currentBgIndex, setCurrentBgIndex] = useState(0);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentBgIndex((prev) => (prev + 1) % 6);
+        }, 3000);
+        return () => clearInterval(interval);
+    }, []);
 
     // Open a fresh wizard, pre-filling from the saved profile/preferences when available.
     // Profile fetch is best-effort: failure or empty data just opens the default form.
@@ -188,7 +197,7 @@ const FindUniversities = () => {
 
 
     return (
-        <div className="relative space-y-8 pb-32">
+        <div className="max-w-[1200px] mx-auto w-full p-4 sm:p-6 lg:p-8 font-sans pb-20 relative space-y-8">
             {/* AI Generating Overlay */}
             {isGenerating && (
                 <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-md animate-in fade-in duration-500">
@@ -204,16 +213,16 @@ const FindUniversities = () => {
             {/* Header */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-4xl font-black tracking-tight bg-gradient-to-br from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent">Find Your Dream University</h1>
+                    <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight font-serif text-[#111827] dark:text-white mb-2">Find Your Dream University</h1>
                     <p className="text-gray-500 mt-2 text-lg">Personalized AI recommendations matched to your academic excellence.</p>
                 </div>
                 <div className="flex gap-3">
 
                     <Button
                         onClick={openFreshWizard}
-                        className="gap-2 px-8 rounded-2xl shadow-xl shadow-primary/20 bg-gradient-to-br from-primary to-indigo-600"
+                        className="w-full sm:w-auto h-12 lg:h-11 px-6 sm:px-8 text-base lg:text-sm font-semibold bg-gradient-to-r from-blue-600 via-teal-500 to-blue-600 animate-gradient-shift text-white shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/40 transform hover:-translate-y-1 border-0 rounded-2xl flex items-center justify-center gap-2 group transition-all"
                     >
-                        <Sparkles className="h-5 w-5" /> Find Universities
+                        <Sparkles className="w-5 h-5 lg:w-4 lg:h-4" /> Start Evaluation
                     </Button>
                 </div>
             </div>
@@ -365,29 +374,100 @@ const FindUniversities = () => {
                         </>
                     ) : (
                         <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-                            <div className="bg-gradient-to-b from-[#6366f1] to-[#4f46e5] rounded-[2rem] p-8 text-white shadow-xl shadow-indigo-500/20 flex flex-col justify-between min-h-[400px]">
-                                <div>
-                                    <TrendingUp className="h-8 w-8 mb-6 text-white" />
-                                    <h3 className="text-2xl font-bold mb-4">Enhance admission chances by matching accurately</h3>
-                                    <p className="text-white/80 text-sm leading-relaxed">Our AI considers GPA, language test scores, and research papers for real-world accuracy.</p>
+                            <div className="relative rounded-[2rem] p-8 text-white shadow-xl shadow-indigo-500/20 flex flex-col justify-between min-h-[400px] overflow-hidden">
+                                {/* Background Image Slider */}
+                                <div className="absolute inset-0 z-0">
+                                    {[1, 2, 3, 4, 5, 6].map((num, idx) => (
+                                        <img
+                                            key={num}
+                                            src={`/animations/findmatch_slider/${num}.jpg`}
+                                            alt={`Background ${num}`}
+                                            className={cn(
+                                                "absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out",
+                                                idx === currentBgIndex ? "opacity-100" : "opacity-0"
+                                            )}
+                                        />
+                                    ))}
+                                    {/* Dark Overlay for readability (Homepage Style) */}
+                                    <div className="absolute inset-0 bg-slate-900/60 z-0"></div>
                                 </div>
-                                <button className="mt-8 w-full text-xs font-bold tracking-widest uppercase bg-white/10 hover:bg-white/20 transition-colors py-4 rounded-xl border border-white/20">
+
+                                <div className="relative z-10">
+                                    <TrendingUp className="h-8 w-8 mb-6 text-white drop-shadow-md" />
+                                    <h3 className="text-2xl font-bold mb-4 drop-shadow-md font-serif tracking-tight">Enhance admission chances by matching accurately</h3>
+                                    <p className="text-white/90 text-sm leading-relaxed drop-shadow-sm font-light">Our AI considers GPA, language test scores, and research papers for real-world accuracy.</p>
+                                </div>
+                                <button className="relative z-10 mt-8 w-full text-xs font-bold tracking-widest uppercase bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors py-4 rounded-xl border border-white/30 shadow-lg">
                                     Learn how it works
                                 </button>
                             </div>
 
-                            <div className="xl:col-span-3 py-32 text-center bg-white dark:bg-gray-800 rounded-[3rem] border-2 border-dashed border-gray-100 dark:border-gray-700">
-                                <div className="h-24 w-24 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-8">
-                                    <Sparkles className="h-12 w-12 text-primary animate-pulse" />
+                            <div className="xl:col-span-3 flex flex-col items-center justify-center py-12 px-6 sm:px-8 text-center bg-white dark:bg-gray-800 rounded-[3rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 dark:border-gray-800 relative overflow-hidden">
+                                {/* Subtle background glow */}
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500/5 blur-[100px] rounded-full pointer-events-none"></div>
+
+                                <div className="relative z-10 flex flex-col items-center w-full max-w-4xl mx-auto">
+                                    <div className="h-16 w-16 bg-blue-50/50 dark:bg-gray-800 rounded-full flex items-center justify-center mb-6 shadow-sm border border-blue-100/50">
+                                        <Sparkles className="h-8 w-8 text-blue-600 animate-pulse" />
+                                    </div>
+
+                                    <span className="text-xs font-bold tracking-widest text-blue-600 dark:text-blue-400 uppercase mb-3">YOUR PERSONALISED SHORTLIST STARTS HERE</span>
+                                    <h2 className="text-3xl md:text-4xl font-extrabold mb-4 font-serif text-slate-900 dark:text-white tracking-tight">Run your first university search.</h2>
+                                    <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed font-light mb-10">
+                                        Complete our 6-step wizard to discover AI-powered university matches tailored to your academic profile, budget, and ambitions.
+                                    </p>
+
+                                    {/* Features Grid */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full mb-10 text-left">
+                                        <div className="flex flex-col p-5 rounded-2xl border border-slate-100 dark:border-gray-700 bg-slate-50/50 dark:bg-gray-800/50 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors">
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <div className="h-8 w-8 rounded-full bg-blue-100/50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-sm font-bold">1</div>
+                                                <h4 className="font-semibold text-slate-900 dark:text-white text-sm">Profile & academics</h4>
+                                            </div>
+                                            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Add your education, grades and test scores.</p>
+                                        </div>
+                                        <div className="flex flex-col p-5 rounded-2xl border border-slate-100 dark:border-gray-700 bg-slate-50/50 dark:bg-gray-800/50 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors">
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <div className="h-8 w-8 rounded-full bg-blue-100/50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-sm font-bold">2</div>
+                                                <h4 className="font-semibold text-slate-900 dark:text-white text-sm">Preferences & budget</h4>
+                                            </div>
+                                            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Choose your study goals, destinations and budget.</p>
+                                        </div>
+                                        <div className="flex flex-col p-5 rounded-2xl border border-slate-100 dark:border-gray-700 bg-slate-50/50 dark:bg-gray-800/50 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors">
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <div className="h-8 w-8 rounded-full bg-blue-100/50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-sm font-bold">3</div>
+                                                <h4 className="font-semibold text-slate-900 dark:text-white text-sm">AI-powered shortlist</h4>
+                                            </div>
+                                            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">Receive relevant university matches you can compare and save.</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Reassurance Badges */}
+                                    <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
+                                        <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-slate-100 dark:bg-gray-700 text-xs font-medium text-slate-600 dark:text-slate-300">
+                                            6 guided steps
+                                        </span>
+                                        <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-slate-100 dark:bg-gray-700 text-xs font-medium text-slate-600 dark:text-slate-300">
+                                            Takes 3–5 minutes
+                                        </span>
+                                        <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-slate-100 dark:bg-gray-700 text-xs font-medium text-slate-600 dark:text-slate-300">
+                                            Progress saved automatically
+                                        </span>
+                                    </div>
+
+                                    {/* Call to Action */}
+                                    <Button
+                                        onClick={openFreshWizard}
+                                        className="w-full sm:w-auto h-14 px-8 text-base font-semibold bg-gradient-to-r from-blue-600 via-teal-500 to-blue-600 animate-gradient-shift text-white shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/40 transform hover:-translate-y-1 border-0 rounded-2xl flex items-center justify-center gap-2 group transition-all motion-reduce:transition-none motion-reduce:hover:transform-none"
+                                    >
+                                        Start the 6-step search
+                                        <span className="group-hover:translate-x-1 transition-transform duration-200 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0">→</span>
+                                    </Button>
+
+                                    <p className="mt-5 text-xs text-slate-400 dark:text-slate-500">
+                                        You can update your answers and run another search anytime.
+                                    </p>
                                 </div>
-                                <h2 className="text-3xl font-black mb-4">You haven't run a search yet</h2>
-                                <p className="text-gray-500 mb-10 max-w-md mx-auto">Complete our 6-step wizard to see AI-powered university matches tailored exactly to your profile.</p>
-                                <Button
-                                    onClick={openFreshWizard}
-                                    className="rounded-2xl px-12 h-14 text-lg bg-gradient-to-br from-primary to-indigo-600 shadow-2xl shadow-primary/30"
-                                >
-                                    Start Free Evaluation
-                                </Button>
                             </div>
                         </div>
                     )}

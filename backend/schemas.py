@@ -415,3 +415,21 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
+
+# ── Chat Session Schemas ─────────────────────────────────────────────────────
+
+class ChatMessageOut(BaseModel):
+    role: str
+    text: str
+    created_at: datetime
+
+class SaveChatSessionRequest(BaseModel):
+    title: str
+    messages: List[Dict[str, Any]]  # [{role, text}]
+
+class ChatSessionOut(BaseModel):
+    id: str
+    title: str
+    messages: List[ChatMessageOut]
+    created_at: datetime
+    updated_at: datetime

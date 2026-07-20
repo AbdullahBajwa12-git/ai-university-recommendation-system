@@ -1,21 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  Globe, BookOpen, GraduationCap, Wallet, X, Loader2,
+  X, Loader2, ChevronDown, Menu
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Button from '../../components/common/Button';
 import { cn } from '../../utils/cn';
 import profileService from '../../services/profileService';
 
-const countries = ['USA', 'Canada', 'Germany', 'Australia', 'UK', 'Netherlands', 'Ireland', 'Sweden'];
-const studyLevels = ['Bachelors', 'Masters', 'PhD'];
-const fields = ['Computer Science', 'Data Science', 'Artificial Intelligence', 'Business Analytics', 'Electrical Engineering', 'Biotechnology'];
+const countriesList = [
+  { name: 'UK', label: 'United Kingdom', code: 'gb' },
+  { name: 'Canada', label: 'Canada', code: 'ca' },
+  { name: 'Australia', label: 'Australia', code: 'au' },
+  { name: 'Germany', label: 'Germany', code: 'de' },
+  { name: 'USA', label: 'USA', code: 'us' },
+  { name: 'Netherlands', label: 'Netherlands', code: 'nl' },
+  { name: 'Ireland', label: 'Ireland', code: 'ie' },
+  { name: 'Sweden', label: 'Sweden', code: 'se' }
+];
+
+const studyLevels = ['Bachelors', 'Master\'s degree', 'PhD'];
+const fields = ['Computer Science', 'Data Science', 'Artificial Intelligence', 'Business Analytics', 'Electrical Engineering', 'Biotechnology', 'Cybersecurity', 'Software Engineering'];
+
+const snapshotImage = "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?q=80&w=800&auto=format&fit=crop";
 
 const Preferences = () => {
+  const navigate = useNavigate();
   const [selectedCountries, setSelectedCountries] = useState([]);
-  const [selectedLevel, setSelectedLevel] = useState('Masters');
+  const [selectedLevel, setSelectedLevel] = useState("Master's degree");
   const [selectedFields, setSelectedFields] = useState([]);
-  const [budget, setBudget] = useState(45000);
+  const [intendedMajor, setIntendedMajor] = useState('Computer Science');
+  const [budget, setBudget] = useState(25000);
+  const [scholarshipNeeded, setScholarshipNeeded] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -25,12 +41,20 @@ const Preferences = () => {
       try {
         const data = await profileService.getProfile();
         if (!active) return;
+
         setSelectedCountries(Array.isArray(data.preferred_countries) ? data.preferred_countries : []);
-        setSelectedFields(Array.isArray(data.preferred_fields) ? data.preferred_fields : []);
+
+        let initialFields = Array.isArray(data.preferred_fields) ? data.preferred_fields : [];
+        if (initialFields.length > 0) {
+          setIntendedMajor(initialFields[0]);
+          setSelectedFields(initialFields.slice(1));
+        } else {
+          setSelectedFields([]);
+        }
+
         if (data.preferred_study_level) setSelectedLevel(data.preferred_study_level);
         if (data.budget_max != null) setBudget(data.budget_max);
       } catch (err) {
-        // 404 = no profile yet: keep defaults. Other errors: notify.
         if (active && err.response?.status !== 404) toast.error('Failed to load preferences');
       } finally {
         if (active) setLoading(false);
@@ -58,7 +82,7 @@ const Preferences = () => {
         preferred_study_level: selectedLevel,
         budget_max: Number(budget),
         preferred_countries: selectedCountries,
-        preferred_fields: selectedFields,
+        preferred_fields: [intendedMajor, ...selectedFields],
       });
       toast.success('Preferences saved');
     } catch {
@@ -76,143 +100,286 @@ const Preferences = () => {
     );
   }
 
+  const majorOptions = [...new Set([intendedMajor, ...fields])].filter(Boolean);
+
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-12">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Study Preferences</h2>
-        <p className="text-gray-500 mt-1">Customize your preferences to refine AI recommendations.</p>
-      </div>
-
-      {/* Countries */}
-      <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-5">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl">
-            <Globe className="h-5 w-5 text-blue-500" />
-          </div>
-          <div>
-            <h4 className="text-lg font-bold text-gray-900 dark:text-white">Target Countries</h4>
-            <p className="text-sm text-gray-400">Select up to 5 countries.</p>
-          </div>
+    <div className="max-w-[1200px] mx-auto w-full p-4 sm:p-6 lg:p-8 font-sans pb-20">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 lg:mb-8 gap-4">
+        <div>
+          <p className="text-blue-600 text-[11px] font-bold tracking-widest mb-2 uppercase">Shape your shortlist</p>
+          <h2 className="text-4xl font-extrabold text-[#111827] tracking-tight font-serif mb-2">Study Preferences</h2>
+          <p className="text-gray-500 text-sm">Tell us what matters most. You can adjust these choices in every search.</p>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {countries.map((c) => (
-            <button
-              key={c}
-              onClick={() => toggleCountry(c)}
-              className={cn(
-                'px-4 py-3 border rounded-xl text-sm font-medium transition-all text-left',
-                selectedCountries.includes(c)
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-blue-300',
-              )}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-        {selectedCountries.length > 0 && (
-          <div className="flex flex-wrap gap-2 pt-2">
-            {selectedCountries.map((c) => (
-              <span key={c} className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 border border-blue-200 dark:border-blue-800 rounded-full text-sm font-medium">
-                {c}
-                <button onClick={() => toggleCountry(c)}><X className="h-3 w-3" /></button>
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Study Level + Field */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-5">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-2xl">
-              <GraduationCap className="h-5 w-5 text-purple-500" />
-            </div>
-            <h4 className="text-lg font-bold text-gray-900 dark:text-white">Study Level</h4>
-          </div>
-          <div className="space-y-3">
-            {studyLevels.map((l) => (
-              <button
-                key={l}
-                onClick={() => setSelectedLevel(l)}
-                className={cn(
-                  'flex w-full items-center gap-3 p-4 rounded-2xl border transition-all',
-                  selectedLevel === l
-                    ? 'border-purple-400 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300'
-                    : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300',
-                )}
-              >
-                <div className={cn(
-                  'h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors',
-                  selectedLevel === l ? 'border-purple-500' : 'border-gray-300',
-                )}>
-                  {selectedLevel === l && <div className="h-2.5 w-2.5 rounded-full bg-purple-500" />}
-                </div>
-                <span className="font-medium text-sm">{l}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-5">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl">
-              <BookOpen className="h-5 w-5 text-emerald-500" />
-            </div>
-            <h4 className="text-lg font-bold text-gray-900 dark:text-white">Fields of Interest</h4>
-          </div>
-          <div className="space-y-2">
-            {fields.map((f) => (
-              <button
-                key={f}
-                onClick={() => toggleField(f)}
-                className={cn(
-                  'flex w-full justify-between items-center px-4 py-3 rounded-xl border text-sm transition-all',
-                  selectedFields.includes(f)
-                    ? 'bg-emerald-600 text-white border-emerald-600'
-                    : 'text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-emerald-300',
-                )}
-              >
-                {f}
-                {selectedFields.includes(f) && <X className="h-3 w-3" />}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Budget */}
-      <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-5">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-2xl">
-            <Wallet className="h-5 w-5 text-amber-500" />
-          </div>
-          <div>
-            <h4 className="text-lg font-bold text-gray-900 dark:text-white">Annual Tuition Budget</h4>
-            <p className="text-sm text-gray-400">Estimate your yearly capacity.</p>
-          </div>
-        </div>
-        <div className="px-2">
-          <input
-            type="range" min="0" max="100000" step="1000"
-            value={budget}
-            onChange={(e) => setBudget(parseInt(e.target.value))}
-            className="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
-          />
-          <div className="flex justify-between mt-4 text-sm font-medium text-gray-500">
-            <span>$0</span>
-            <span className="text-blue-600 text-lg font-bold">${budget.toLocaleString()}</span>
-            <span>$100,000+</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex justify-end">
-        <Button className="px-12 rounded-2xl gap-2" onClick={handleSave} disabled={saving}>
-          {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-          {saving ? 'Saving...' : 'Save Preferences'}
+        <Button
+          onClick={handleSave}
+          disabled={saving}
+          className="bg-[#2596be] hover:bg-[#1e7a9c] text-white px-6 py-2.5 rounded-xl font-medium shadow-sm transition-all text-sm"
+        >
+          {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2 inline" /> : null}
+          Save preferences
         </Button>
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+        <div className="flex-1 w-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            {/* Card 01: Academic direction */}
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] flex flex-col">
+              <div className="flex items-start gap-4 mb-6">
+                <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm shrink-0">01</div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">Academic direction</h3>
+                  <p className="text-xs text-gray-500">Degree and subject preferences</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-700 mb-1.5">Target degree</label>
+                  <div className="relative">
+                    <select
+                      className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer text-gray-700"
+                      value={selectedLevel}
+                      onChange={e => setSelectedLevel(e.target.value)}
+                    >
+                      {studyLevels.map(l => <option key={l} value={l}>{l}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-2.5 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-700 mb-1.5">Intended major</label>
+                  <div className="relative">
+                    <select
+                      className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer text-gray-700"
+                      value={intendedMajor}
+                      onChange={e => setIntendedMajor(e.target.value)}
+                    >
+                      {majorOptions.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-2.5 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1">
+                <label className="block text-[11px] font-bold text-gray-700 mb-2">Areas of interest</label>
+                <div className="flex flex-wrap gap-2">
+                  {selectedFields.map(f => (
+                    <span key={f} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50/70 text-blue-600 border border-blue-200/60 rounded-lg text-xs font-semibold">
+                      {f}
+                      <button onClick={() => toggleField(f)} className="hover:text-blue-800 focus:outline-none"><X className="h-3 w-3" /></button>
+                    </span>
+                  ))}
+                  <div className="relative inline-block">
+                    <select
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={e => {
+                        if (e.target.value && !selectedFields.includes(e.target.value)) {
+                          toggleField(e.target.value);
+                        }
+                        e.target.value = "";
+                      }}
+                    >
+                      <option value="">Add</option>
+                      {fields.filter(f => !selectedFields.includes(f) && f !== intendedMajor).map(f => (
+                        <option key={f} value={f}>{f}</option>
+                      ))}
+                    </select>
+                    <button className="inline-flex items-center gap-1 px-3 py-1.5 bg-white text-gray-600 border border-gray-200 rounded-lg text-xs font-semibold hover:bg-gray-50 pointer-events-none">
+                      {selectedFields.length > 0 ? '+ Add more' : '+ Add interest'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 02: Destination choices */}
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] flex flex-col">
+              <div className="flex items-start gap-4 mb-6">
+                <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-sm shrink-0">02</div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">Destination choices</h3>
+                  <p className="text-xs text-gray-500">Select up to five countries</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-4 flex-1">
+                {countriesList.map(c => {
+                  const isSelected = selectedCountries.includes(c.name);
+                  return (
+                    <button
+                      key={c.name}
+                      onClick={() => toggleCountry(c.name)}
+                      className={cn(
+                        "flex items-center gap-2.5 px-3 py-2 rounded-xl border text-[13px] font-semibold transition-all text-left",
+                        isSelected
+                          ? "border-blue-500 text-blue-700 bg-blue-50/30 ring-1 ring-blue-500"
+                          : "border-gray-200 text-gray-700 hover:border-gray-300"
+                      )}
+                    >
+                      <img src={`/flags/${c.code}.svg`} alt={c.label} className="w-5 h-3.5 object-cover rounded-sm shadow-sm" />
+                      <span className="truncate">{c.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="text-[11px] text-gray-400 mt-2">
+                {selectedCountries.length} of 5 selected · recommendations prioritise preferred destinations first.
+              </p>
+            </div>
+
+            {/* Card 03: Budget and funding */}
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] flex flex-col">
+              <div className="flex items-start gap-4 mb-6">
+                <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-sm shrink-0">03</div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">Budget and funding</h3>
+                  <p className="text-xs text-gray-500">Annual affordability preferences</p>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-[11px] font-bold text-gray-700 mb-1.5">Maximum annual tuition</label>
+                <div className="relative">
+                  <select
+                    className="w-full appearance-none bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-xs font-medium focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer text-gray-700"
+                    value={budget}
+                    onChange={e => setBudget(Number(e.target.value))}
+                  >
+                    <option value={15000}>USD 15,000 / year</option>
+                    <option value={25000}>USD 25,000 / year</option>
+                    <option value={35000}>USD 35,000 / year</option>
+                    <option value={45000}>USD 45,000 / year</option>
+                    <option value={55000}>USD 55,000 / year</option>
+                    <option value={100000}>USD 100,000+ / year</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-3 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 items-end">
+                <button
+                  className={cn(
+                    "p-3 rounded-xl border text-left transition-all h-full",
+                    scholarshipNeeded
+                      ? "border-amber-300 bg-[#fffcf2]"
+                      : "border-gray-200 bg-gray-50/50 hover:border-gray-300"
+                  )}
+                  onClick={() => setScholarshipNeeded(true)}
+                >
+                  <h4 className="font-bold text-gray-900 text-[13px] mb-1">Scholarship needed</h4>
+                  <p className="text-[11px] text-gray-500 leading-relaxed">Required to make study affordable</p>
+                </button>
+                <button
+                  className={cn(
+                    "p-3 rounded-xl border text-left transition-all h-full",
+                    !scholarshipNeeded
+                      ? "border-gray-400 bg-white"
+                      : "border-gray-200 bg-gray-50/50 hover:border-gray-300"
+                  )}
+                  onClick={() => setScholarshipNeeded(false)}
+                >
+                  <h4 className="font-bold text-gray-900 text-[13px] mb-1">Self-funded</h4>
+                  <p className="text-[11px] text-gray-500 leading-relaxed">Funding already available</p>
+                </button>
+              </div>
+            </div>
+
+            {/* Card 04: Decision priorities */}
+            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] flex flex-col">
+              <div className="flex items-start gap-4 mb-6">
+                <div className="w-10 h-10 rounded-full bg-pink-50 text-pink-600 flex items-center justify-center font-bold text-sm shrink-0">04</div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">Decision priorities</h3>
+                  <p className="text-xs text-gray-500">Drag to reflect importance</p>
+                </div>
+              </div>
+
+              <div className="space-y-2 flex-1">
+                {[
+                  { id: 1, text: "Program fit and entry eligibility", color: "text-blue-600 bg-blue-50" },
+                  { id: 2, text: "Tuition and scholarship options", color: "text-emerald-600 bg-emerald-50" },
+                  { id: 3, text: "University reputation", color: "text-amber-600 bg-amber-50" },
+                  { id: 4, text: "Location and post-study opportunities", color: "text-pink-600 bg-pink-50" }
+                ].map((item, idx) => (
+                  <div key={item.id} className="flex items-center gap-3 py-1.5 px-2">
+                    <div className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold", item.color)}>
+                      {idx + 1}
+                    </div>
+                    <span className="text-[13px] font-bold text-gray-800 flex-1">{item.text}</span>
+                    <Menu className="h-4 w-4 text-gray-300 cursor-move" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Sidebar Snapshot */}
+        <div className="w-full lg:w-[320px] shrink-0 space-y-4">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] overflow-hidden lg:sticky lg:top-8">
+            <div className="relative h-[160px]">
+              <img src={snapshotImage} alt="University" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-gray-900/95 via-gray-900/40 to-transparent"></div>
+              <div className="absolute bottom-5 left-5 right-5">
+                <p className="text-[#64ffda] text-[9px] font-bold tracking-widest mb-1.5 uppercase">PREFERENCE SNAPSHOT</p>
+                <h3 className="text-white text-[19px] font-bold font-serif leading-tight">Your ideal study route</h3>
+              </div>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-[13px] font-medium text-gray-500">Degree</span>
+                <span className="text-[13px] font-bold text-gray-900">{selectedLevel === "Master's degree" ? "Master's" : selectedLevel}</span>
+              </div>
+              <div className="h-px w-full bg-gray-100"></div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[13px] font-medium text-gray-500">Major</span>
+                <span className="text-[13px] font-bold text-gray-900 text-right max-w-[150px] truncate">{intendedMajor || 'Not selected'}</span>
+              </div>
+              <div className="h-px w-full bg-gray-100"></div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[13px] font-medium text-gray-500">Destinations</span>
+                <span className="text-[13px] font-bold text-gray-900">{selectedCountries.length} selected</span>
+              </div>
+              <div className="h-px w-full bg-gray-100"></div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[13px] font-medium text-gray-500">Budget</span>
+                <span className="text-[13px] font-bold text-gray-900">≤ ${budget >= 1000 ? (budget / 1000) + 'k' : budget} / year</span>
+              </div>
+              <div className="h-px w-full bg-gray-100"></div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-[13px] font-medium text-gray-500">Scholarship</span>
+                <span className={cn("text-[13px] font-bold", scholarshipNeeded ? "text-amber-600" : "text-gray-900")}>
+                  {scholarshipNeeded ? 'Required' : 'Self-funded'}
+                </span>
+              </div>
+
+              <div className="pt-2">
+                <Button
+                  onClick={() => navigate('/find-universities')}
+                  className="w-full py-2.5 rounded-xl bg-[#2596be] hover:bg-[#1e7a9c] text-white font-bold flex justify-center items-center gap-2 shadow-sm transition-all text-sm"
+                >
+                  Start UniFinder &rarr;
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-[#f8faff] p-5 rounded-2xl border border-blue-50/50">
+            <p className="text-blue-600 text-xs font-bold mb-1.5">Tip</p>
+            <p className="text-[13px] text-gray-600 leading-relaxed font-medium">
+              Wider destination choices usually produce a stronger shortlist without changing your academic priorities.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

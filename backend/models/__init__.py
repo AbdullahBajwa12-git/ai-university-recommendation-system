@@ -358,6 +358,23 @@ class Scholarship(Document):
     class Settings:
         name = "scholarships"
 
+# ── CHAT SESSIONS ────────────────────────────────────────────────────────────
+
+class ChatMessage(PydanticBaseModel):
+    role: str  # 'user' | 'assistant'
+    text: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+class ChatSession(Document):
+    user: Link[User]
+    title: str = "New Chat"
+    messages: List[ChatMessage] = []
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+    class Settings:
+        name = "chat_sessions"
+
 # List of models for Beanie initialization
 ALL_MODELS = [
     User,
@@ -376,4 +393,5 @@ ALL_MODELS = [
     AdmissionPrediction,
     Application,
     Scholarship,
+    ChatSession,
 ]
