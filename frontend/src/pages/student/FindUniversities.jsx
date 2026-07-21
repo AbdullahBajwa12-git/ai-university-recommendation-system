@@ -395,7 +395,7 @@ const FindUniversities = () => {
                                                         university_email: uni.university_email || null,
                                                         university_website: uni.university_website || null,
                                                         course_page_url: uni.course_page_url || null,
-                                                        tuition_fee: uni.tuition_fee || null,
+                                                        yearly_tuition_usd: uni.yearly_tuition_usd || null,
                                                         acceptance_rate: uni.acceptance_rate || null,
                                                         deadline: uni.deadline || null,
                                                         reason_for_match: uni.reason_for_match || null,

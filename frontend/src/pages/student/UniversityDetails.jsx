@@ -147,7 +147,7 @@ const UniversityDetails = () => {
                 <div className="flex justify-between items-center py-3 border-y border-dashed border-gray-100 dark:border-gray-700">
                   <div className="text-center">
                     <p className="text-[10px] font-bold uppercase text-gray-400">Tuition/yr</p>
-                    <p className="text-sm font-bold text-gray-800 dark:text-white">{fmtTuition(uni.yearly_tuition_fee)}</p>
+                    <p className="text-sm font-bold text-gray-800 dark:text-white">{fmtTuition(uni.yearly_tuition_usd)}</p>
                   </div>
                   <div className="text-center border-l border-gray-100 dark:border-gray-700 pl-4">
                     <p className="text-[10px] font-bold uppercase text-gray-400">Acceptance</p>

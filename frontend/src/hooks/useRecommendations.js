@@ -27,7 +27,8 @@ export const useRecommendations = () => {
             toast.success('Recommendations generated successfully!');
         },
         onError: (error) => {
-            toast.error(error.response?.data?.detail || 'Failed to generate recommendations');
+            const message = error.response?.data?.detail || (error.code === 'ECONNABORTED' ? 'Request timed out. Please try again.' : error.message) || 'Failed to generate recommendations';
+            toast.error(message);
         },
     });
 

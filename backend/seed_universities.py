@@ -70,11 +70,11 @@ async def seed_universities():
             continue
         await models.University(
             university_name=uni_name,
-            country=country_cache[country_name],
+            country=country_name,
             city=city,
             qs_ranking=rank,
             website=website,
-            yearly_tuition_fee=fee,
+            yearly_tuition_usd=fee,
             acceptance_rate=rate,
             description=desc,
         ).insert()

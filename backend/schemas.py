@@ -177,7 +177,7 @@ class RecommendedUniversityOut(BaseModel):
     university_email: Optional[str] = None
     university_website: str
     course_page_url: Optional[str] = None
-    tuition_fee: Optional[int] = None
+    yearly_tuition_usd: Optional[int] = None
     acceptance_rate: Optional[float] = None
     deadline: Optional[str] = None
     reason_for_match: str
@@ -221,7 +221,7 @@ class SaveUniversityRequest(BaseModel):
     university_email: Optional[str] = None
     university_website: Optional[str] = None
     course_page_url: Optional[str] = None
-    tuition_fee: Optional[int] = None
+    yearly_tuition_usd: Optional[int] = None
     acceptance_rate: Optional[float] = None
     deadline: Optional[str] = None
     reason_for_match: Optional[str] = None
@@ -242,7 +242,7 @@ class SavedUniversityOut(BaseModel):
     university_email: Optional[str] = None
     university_website: Optional[str] = None
     course_page_url: Optional[str] = None
-    tuition_fee: Optional[int] = None
+    yearly_tuition_usd: Optional[int] = None
     acceptance_rate: Optional[float] = None
     deadline: Optional[str] = None
     reason_for_match: Optional[str] = None
@@ -389,7 +389,7 @@ class ProgramBase(BaseModel):
     field_id: Optional[int] = None
     study_level: Optional[str] = None
     duration_months: Optional[int] = None
-    tuition_fee: Optional[int] = None
+    yearly_tuition_usd: Optional[int] = None
     minimum_cgpa: Optional[float] = None
     minimum_ielts: Optional[float] = None
 

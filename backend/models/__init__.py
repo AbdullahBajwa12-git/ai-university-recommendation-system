@@ -151,7 +151,7 @@ class SavedUniversity(Document):
     university_email: Optional[str] = None
     university_website: Optional[str] = None
     category: Optional[str] = None
-    tuition_fee: Optional[int] = None
+    yearly_tuition_usd: Optional[int] = None
     acceptance_rate: Optional[float] = None
     course_page_url: Optional[str] = None
     deadline: Optional[str] = None

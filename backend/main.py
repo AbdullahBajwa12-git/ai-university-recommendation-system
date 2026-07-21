@@ -241,7 +241,7 @@ async def admin_create_university(
         city=payload.city,
         qs_ranking=payload.qs_ranking,
         website=payload.website,
-        yearly_tuition_fee=payload.yearly_tuition_fee,
+        yearly_tuition_usd=payload.yearly_tuition_usd,
         acceptance_rate=payload.acceptance_rate,
         description=payload.description,
     )
@@ -425,7 +425,7 @@ async def save_university(
         university_email=data.university_email,
         university_website=data.university_website,
         course_page_url=data.course_page_url,
-        tuition_fee=data.tuition_fee,
+        yearly_tuition_usd=data.yearly_tuition_usd,
         acceptance_rate=data.acceptance_rate,
         deadline=data.deadline,
         reason_for_match=data.reason_for_match,
@@ -473,7 +473,7 @@ def _university_out(uni: "models.University", country_name) -> dict:
         "city": uni.city,
         "qs_ranking": uni.qs_ranking,
         "website": uni.website,
-        "yearly_tuition_fee": uni.yearly_tuition_fee,
+        "yearly_tuition_usd": uni.yearly_tuition_usd,
         "acceptance_rate": uni.acceptance_rate,
         "description": uni.description,
         "created_at": uni.created_at,
@@ -708,7 +708,7 @@ def _hydrate_ai_results(raw_unis, top_candidates, prog_map, profile_dict):
             "university_email":   sanitize_url(db_u.admissions_email),
             "university_website": sanitize_url(uni_website),
             "course_page_url":    sanitize_url(course_url),
-            "tuition_fee":        db_u.yearly_tuition_usd,
+            "yearly_tuition_usd": db_u.yearly_tuition_usd,
             "acceptance_rate":    db_u.acceptance_rate,
             "deadline":           deadline,
             "reason_for_match":   ai_u.get("reason", "Good match for your profile."),
@@ -773,51 +773,68 @@ Candidate Pool:
 """
 
     openai_key = os.getenv("OPENAI_API_KEY", "")
-    if not openai_key:
-        raise HTTPException(status_code=500, detail="OpenAI API key not configured.")
-
-    payload = {
-        "model": "gpt-4.1-mini",
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user",   "content": user_message}
-        ],
-        "temperature": 0.2,
-        "response_format": {"type": "json_object"}
-    }
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {openai_key}"
-    }
-
     final_universities = None
-    try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            resp = await client.post(OPENAI_API_URL, headers=headers, json=payload)
-        resp.raise_for_status()
 
-        content = resp.json()["choices"][0]["message"]["content"]
-        data = json.loads(content)
-        raw_unis = data.get("universities", [])
+    if openai_key:
+        payload = {
+            "model": "gpt-4.1-mini",
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user",   "content": user_message}
+            ],
+            "temperature": 0.2,
+            "response_format": {"type": "json_object"}
+        }
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {openai_key}"
+        }
 
-        final_universities = _hydrate_ai_results(raw_unis, top_candidates, prog_map, profile_dict)
-        print(f"[DEBUG] AI returned {len(raw_unis)} unis. Validated & Hydrated {len(final_universities)}.")
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                resp = await client.post(OPENAI_API_URL, headers=headers, json=payload)
+            resp.raise_for_status()
 
-        if not final_universities:
-            raise HTTPException(status_code=500, detail="AI failed to generate valid recommendations from the candidate pool.")
+            content = resp.json()["choices"][0]["message"]["content"]
+            data = json.loads(content)
+            raw_unis = data.get("universities", [])
 
-    except httpx.HTTPStatusError as e:
-        print(f"OpenAI request failed with status {e.response.status_code}")
-        raise HTTPException(status_code=502, detail="The recommendation service is temporarily unavailable. Please try again.")
-    except httpx.RequestError as e:
-        print(f"OpenAI network/HTTP error: {e}")
-        raise HTTPException(status_code=502, detail="The recommendation service is temporarily unavailable. Please try again.")
-    except (json.JSONDecodeError, KeyError, ValueError) as e:
-        print(f"OpenAI parsing/validation error: {e}")
+            final_universities = _hydrate_ai_results(raw_unis, top_candidates, prog_map, profile_dict)
+            print(f"[DEBUG] AI returned {len(raw_unis)} unis. Validated & Hydrated {len(final_universities)}.")
+
+        except httpx.HTTPStatusError as e:
+            print(f"OpenAI request failed with status {e.response.status_code}")
+        except httpx.RequestError as e:
+            print(f"OpenAI network/HTTP error: {e}")
+        except (json.JSONDecodeError, KeyError, ValueError) as e:
+            import traceback
+            traceback.print_exc()
+            print(f"OpenAI parsing/validation error: {e}")
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print(f"AI recommendation error: {type(e).__name__} - {str(e)}")
+
+    if not final_universities:
+        # Graceful fallback: use database-scored candidates
+        print("[DEBUG] Using database fallback for recommendations.")
+        try:
+            raw_unis = []
+            for cand in candidate_pool:
+                raw_unis.append({
+                    "name": cand["name"],
+                    "chances": 60,
+                    "category": "TARGET",
+                    "reason": "Recommended based on your academic profile and database filters."
+                })
+            final_universities = _hydrate_ai_results(raw_unis, top_candidates, prog_map, profile_dict)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail="Failed in fallback.") from e
+
+    if not final_universities:
         raise HTTPException(status_code=500, detail="Failed to generate recommendations. Please try again.")
-    except Exception as e:
-        print(f"AI recommendation error: {type(e).__name__} - {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to generate recommendations. Please try again.") from e
 
     # 5. Save Session
     try:

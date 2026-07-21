@@ -7,7 +7,7 @@ import adminService from '../../services/adminService';
 
 const EMPTY_FORM = {
   university_name: '', country: '', city: '', qs_ranking: '',
-  website: '', yearly_tuition_fee: '', acceptance_rate: '', description: '',
+  website: '', yearly_tuition_usd: '', acceptance_rate: '', description: '',
 };
 
 // Form values → API payload: required name/country, numbers coerced, empties dropped.
@@ -17,7 +17,7 @@ const buildPayload = (f) => {
   if (f.website.trim()) p.website = f.website.trim();
   if (f.description.trim()) p.description = f.description.trim();
   if (String(f.qs_ranking).trim() !== '') p.qs_ranking = Number(f.qs_ranking);
-  if (String(f.yearly_tuition_fee).trim() !== '') p.yearly_tuition_fee = Number(f.yearly_tuition_fee);
+  if (String(f.yearly_tuition_usd).trim() !== '') p.yearly_tuition_usd = Number(f.yearly_tuition_usd);
   if (String(f.acceptance_rate).trim() !== '') p.acceptance_rate = Number(f.acceptance_rate);
   return p;
 };
@@ -62,7 +62,7 @@ const ManageUniversities = () => {
       city: u.city || '',
       qs_ranking: u.qs_ranking ?? '',
       website: u.website || '',
-      yearly_tuition_fee: u.yearly_tuition_fee ?? '',
+      yearly_tuition_usd: u.yearly_tuition_usd ?? '',
       acceptance_rate: u.acceptance_rate ?? '',
       description: u.description || '',
     });
@@ -165,7 +165,7 @@ const ManageUniversities = () => {
             </div>
             <div>
               <label className="text-xs font-bold uppercase tracking-widest text-slate-500">Yearly Tuition (USD)</label>
-              <input type="number" className={fieldCls} value={form.yearly_tuition_fee} onChange={onField('yearly_tuition_fee')} placeholder="e.g. 40000" />
+              <input type="number" className={fieldCls} value={form.yearly_tuition_usd} onChange={onField('yearly_tuition_usd')} placeholder="e.g. 40000" />
             </div>
             <div>
               <label className="text-xs font-bold uppercase tracking-widest text-slate-500">Acceptance Rate (%)</label>
