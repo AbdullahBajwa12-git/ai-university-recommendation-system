@@ -9,17 +9,50 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    const token = localStorage.getItem('token');
-    if (savedUser && token) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (e) {
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
+    let mounted = true;
+    const initAuth = async () => {
+      const savedUserStr = localStorage.getItem('user');
+      const token = localStorage.getItem('token');
+      
+      if (savedUserStr && token) {
+        try {
+          const parsedUser = JSON.parse(savedUserStr);
+          if (mounted) setUser(parsedUser);
+        } catch (e) {
+          localStorage.removeItem('user');
+          localStorage.removeItem('token');
+          if (mounted) setUser(null);
+          if (mounted) setLoading(false);
+          return;
+        }
+      } else {
+        if (mounted) setLoading(false);
+        return;
       }
-    }
-    setLoading(false);
+      
+      // Finish loading state immediately
+      if (mounted) setLoading(false);
+
+      // Validate token in background
+      try {
+        const response = await apiClient.get('/auth/me');
+        if (mounted) {
+          setUser(response.data);
+          localStorage.setItem('user', JSON.stringify(response.data));
+        }
+      } catch (error) {
+        const status = error.response?.status;
+        if (status === 401 || status === 403) {
+          localStorage.removeItem('user');
+          localStorage.removeItem('token');
+          if (mounted) setUser(null);
+        }
+        // Do not clear session for network failure, timeout, 5xx, etc.
+        // Do not repeatedly display the service-unavailable toast.
+      }
+    };
+    initAuth();
+    return () => { mounted = false; };
   }, []);
 
   const login = async (email, password) => {
@@ -33,7 +66,16 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
       return userData;
     } catch (error) {
-      const message = error.response?.data?.detail || 'Invalid email or password';
+      let message = 'Login failed';
+      if (!error.response || error.response.status >= 500) {
+        message = 'Authentication service is currently unavailable. Please try again shortly.';
+      } else if (error.response.status === 401) {
+        message = 'Invalid email or password.';
+      } else if (error.response.status === 422) {
+        message = error.response.data?.detail ? (typeof error.response.data.detail === 'string' ? error.response.data.detail : JSON.stringify(error.response.data.detail)) : 'Validation error';
+      } else {
+        message = error.response.data?.detail || 'Invalid email or password.';
+      }
       toast.error(message);
       throw error;
     }
@@ -52,7 +94,18 @@ export const AuthProvider = ({ children }) => {
       toast.success('Account created successfully.');
       return userData;
     } catch (error) {
-      const message = error.response?.data?.detail || 'Registration failed. Try a different email.';
+      let message = 'Registration failed';
+      if (!error.response || error.response.status >= 500) {
+        message = 'Authentication service is currently unavailable. Please try again shortly.';
+      } else if (error.response.status === 409 || error.response.status === 400) {
+        message = error.response.data?.detail || 'Account already exists.';
+      } else if (error.response.status === 422) {
+        message = error.response.data?.detail ? (typeof error.response.data.detail === 'string' ? error.response.data.detail : JSON.stringify(error.response.data.detail)) : 'Validation error';
+      } else if (error.response.status === 401) {
+        message = 'Invalid email or password.';
+      } else {
+        message = error.response.data?.detail || 'Registration failed. Try a different email.';
+      }
       toast.error(message);
       throw error;
     }

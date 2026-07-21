@@ -1,7 +1,21 @@
 import axios from 'axios';
 
+let baseURL = '';
+const isDev = import.meta.env.DEV;
+
+if (isDev) {
+  baseURL = import.meta.env.VITE_API_URL?.trim() || 'http://localhost:8000/api/v1';
+} else {
+  const envUrl = import.meta.env.VITE_API_URL?.trim();
+  if (!envUrl) {
+    throw new Error('CRITICAL: VITE_API_URL is missing in production build! API requests will fail.');
+  }
+  baseURL = envUrl;
+}
+
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1',
+  baseURL,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
