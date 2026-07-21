@@ -227,6 +227,65 @@ const FindUniversities = () => {
                 </div>
             </div>
 
+            {/* ── Hero Image Slider ── */}
+            <div className="relative w-full rounded-[2rem] overflow-hidden shadow-xl shadow-indigo-500/10 select-none" style={{ height: '340px' }}>
+                {/* Slides */}
+                {[1, 2, 3, 4, 5, 6].map((num, idx) => (
+                    <div
+                        key={num}
+                        className={cn(
+                            'absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out',
+                            idx === currentBgIndex ? 'opacity-100' : 'opacity-0'
+                        )}
+                        style={{ backgroundImage: `url('/images/slider/${num}.jpg')` }}
+                    />
+                ))}
+
+                {/* Gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/20 to-transparent pointer-events-none" />
+
+                {/* Caption */}
+                <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 z-10">
+                    <p className="text-white/60 text-xs font-semibold tracking-widest uppercase mb-1">Explore the world</p>
+                    <h2 className="text-white text-2xl sm:text-3xl font-extrabold font-serif tracking-tight drop-shadow-md">
+                        Your Dream Campus Awaits
+                    </h2>
+                </div>
+
+                {/* Prev / Next arrows */}
+                <button
+                    onClick={() => setCurrentBgIndex((prev) => (prev - 1 + 6) % 6)}
+                    aria-label="Previous slide"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 z-20 h-9 w-9 flex items-center justify-center rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-white hover:bg-white/35 transition-all shadow-lg"
+                >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <button
+                    onClick={() => setCurrentBgIndex((prev) => (prev + 1) % 6)}
+                    aria-label="Next slide"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 z-20 h-9 w-9 flex items-center justify-center rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-white hover:bg-white/35 transition-all shadow-lg"
+                >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                </button>
+
+                {/* Dot indicators */}
+                <div className="absolute bottom-5 right-6 flex gap-2 z-20">
+                    {[0, 1, 2, 3, 4, 5].map((i) => (
+                        <button
+                            key={i}
+                            onClick={() => setCurrentBgIndex(i)}
+                            aria-label={`Go to slide ${i + 1}`}
+                            className={cn(
+                                'rounded-full transition-all duration-300',
+                                i === currentBgIndex
+                                    ? 'w-5 h-2 bg-white'
+                                    : 'w-2 h-2 bg-white/50 hover:bg-white/80'
+                            )}
+                        />
+                    ))}
+                </div>
+            </div>
+
             {/* Main Content Area */}
             <div className="space-y-8">
 
@@ -270,7 +329,7 @@ const FindUniversities = () => {
 
                             {/* Grid of Results */}
                             {viewMode === 'saved' && isLoadingSaved ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
                                     {[1, 2, 3, 4].map(i => (
                                         <div key={i} className="bg-white dark:bg-gray-800 rounded-[2rem] border border-gray-100 dark:border-gray-700 p-8 h-[400px] flex flex-col">
                                             <div className="flex gap-4 mb-6">
@@ -304,7 +363,7 @@ const FindUniversities = () => {
                                     </Button>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
                                     {displayUniversities().length > 0 ? (
                                         displayUniversities().map((uni) => {
                                             const savedItem =
