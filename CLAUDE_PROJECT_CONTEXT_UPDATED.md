@@ -669,7 +669,7 @@ async def get_university_recommendations(
 ):
     profile_dict = profile_data.model_dump(exclude_none=True)
 
-    # Build user message exactly like bnn.py
+    # Build the recommendation user message from the profile
     p = profile_dict
     user_message = f"""
 Student Profile:
@@ -1623,8 +1623,6 @@ python-dotenv==1.0.1
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 openai==1.13.3
-langchain==0.1.13
-langchain-openai==0.1.1
 pydantic-settings==2.2.1
 python-multipart==0.0.9
 email-validator==2.1.1
