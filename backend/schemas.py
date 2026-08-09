@@ -142,6 +142,11 @@ class StudentRecommendationProfileIn(BaseModel):
     fully_funded_required: Optional[bool] = None
     partial_scholarship_accepted: Optional[bool] = None
     budget_max: Optional[float] = None
+    budget_currency: Optional[str] = "USD"
+    budget_mode: Optional[str] = None
+    budget_period: Optional[str] = None
+    total_budget: Optional[float] = None
+    max_course_tuition_fee: Optional[float] = None
 
     # Location
     continents: Optional[List[str]] = None

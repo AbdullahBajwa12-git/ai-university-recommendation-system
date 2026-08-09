@@ -203,11 +203,19 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
 
     delete payload.avoid_countries;
     delete payload.open_to_all_destinations;
-    delete payload.budget_mode;
-    delete payload.currency;
-    delete payload.total_budget;
-    delete payload.budget_period;
-    delete payload.max_course_tuition_fee;
+
+    // Rename currency to budget_currency to match backend schema
+    if (payload.currency) {
+      payload.budget_currency = payload.currency;
+      delete payload.currency;
+    }
+
+    if (payload.total_budget !== undefined && payload.total_budget !== null && payload.total_budget !== '') {
+      payload.total_budget = parseFloat(payload.total_budget);
+    }
+    if (payload.max_course_tuition_fee !== undefined && payload.max_course_tuition_fee !== null && payload.max_course_tuition_fee !== '') {
+      payload.max_course_tuition_fee = parseFloat(payload.max_course_tuition_fee);
+    }
     delete payload.max_application_fee;
 
     ['cgpa', 'graduation_year', 'ielts', 'toefl', 'gre', 'gmat', 'sat'].forEach(k => {
@@ -888,7 +896,7 @@ const UniversityFinderModal = ({ isOpen, onClose, onSubmit, isLoading, initialDa
           <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 xl:gap-14">
             {/* ── LEFT: Main Form ── */}
             <div className="flex-1 flex flex-col min-w-0">
-              
+
               {/* Step Header */}
               <div className="mb-5 lg:mb-6 shrink-0 pb-5 border-b border-gray-100 dark:border-gray-800">
                 <p className="text-blue-600 dark:text-blue-400 font-bold text-[9px] tracking-[0.2em] uppercase mb-2">

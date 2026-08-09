@@ -556,7 +556,7 @@ SYSTEM_PROMPT = (
     "For each university you select, you must provide: "
     "'name' (string, exactly matching the candidate_pool name), "
     "'country' (string, exactly matching the candidate_pool country), "
-    "'chances' (integer 0-100, your estimated admission probability), "
+    "'chances' (integer 0-100, an AI fit score evaluating how well their profile aligns with the program), "
     "'category' (string, one of 'SAFE', 'TARGET', or 'REACH'), "
     "'reason' (string, 3-5 sentences EXPLICITLY referencing the student's actual credentials: "
     "mention their CGPA, test scores, intended major, research/work experience, "
@@ -597,12 +597,53 @@ async def _load_university_programs(db_unis) -> dict:
             prog_map[p.university.id].append(p)
     return prog_map
 
+def _get_best_program(u_progs, student_major, student_degree):
+    if not u_progs:
+        return None
+
+    student_major_lower = student_major.lower() if student_major else ""
+
+    # 1. Match both major and degree (if both supplied)
+    if student_major_lower and student_degree:
+        for prog in u_progs:
+            prog_search = f"{prog.program_name.lower()} {(prog.specialization.name.lower() if prog.specialization and hasattr(prog.specialization, 'name') else '')}"
+            if student_major_lower in prog_search and student_degree == _normalize_degree(prog.degree_level):
+                return prog
+        # If both are supplied but no match, do NOT fall back to an unrelated degree-only program
+        return None
+
+    # 2. Match just major (if degree not supplied)
+    if student_major_lower:
+        for prog in u_progs:
+            prog_search = f"{prog.program_name.lower()} {(prog.specialization.name.lower() if prog.specialization and hasattr(prog.specialization, 'name') else '')}"
+            if student_major_lower in prog_search:
+                return prog
+        return None
+
+    # 3. Match just degree (if major not supplied)
+    if student_degree:
+        for prog in u_progs:
+            if student_degree == _normalize_degree(prog.degree_level):
+                return prog
+        return None
+
+    # Do not use an unrelated program's tuition if no relevant program can be established
+    return None
+
 def _score_universities(db_unis, prog_map, profile_dict):
     scored_unis = []
     countries_pref = profile_dict.get('countries', [])
     student_degree_raw = profile_dict.get('degree_applying_for', '')
     student_degree = _normalize_degree(student_degree_raw)
     student_major = profile_dict.get('intended_major', '').lower()
+
+    budget_max = profile_dict.get('budget_max')
+    budget_currency = profile_dict.get('budget_currency', 'USD')
+    budget_mode = profile_dict.get('budget_mode')
+    budget_period = profile_dict.get('budget_period')
+
+    if not budget_max and profile_dict.get('max_course_tuition_fee'):
+        budget_max = profile_dict.get('max_course_tuition_fee')
 
     for u in db_unis:
         u_progs = prog_map.get(u.id, [])
@@ -631,12 +672,33 @@ def _score_universities(db_unis, prog_map, profile_dict):
         if u.qs_ranking:
             score += max(0, 10 - (u.qs_ranking // 50))
 
+        best_prog = _get_best_program(u_progs, student_major, student_degree)
+
+        if budget_max and best_prog and getattr(best_prog, 'tuition', None):
+            if budget_mode == 'total' and budget_period == 'full_degree':
+                # Skip deterministic budget scoring because we lack program duration data
+                pass
+            else:
+                b_curr = budget_currency.upper()
+                t = best_prog.tuition
+
+                # Deterministic comparison only if currencies match or can be safely mapped to USD
+                if b_curr == 'USD' and getattr(t, 'amount_usd', None):
+                    if t.amount_usd > budget_max:
+                        score -= 50
+                elif getattr(t, 'currency', None) and b_curr == t.currency.upper():
+                    if getattr(t, 'amount', None) and t.amount > budget_max:
+                        score -= 50
+                elif getattr(t, 'original_currency', None) and b_curr == t.original_currency.upper():
+                    if getattr(t, 'original_amount', None) and t.original_amount > budget_max:
+                        score -= 50
+
         scored_unis.append((score, u))
 
     scored_unis.sort(key=lambda x: x[0], reverse=True)
     return [u for score, u in scored_unis[:50]]
 
-def _build_candidate_pool(top_candidates, prog_map):
+def _build_candidate_pool(top_candidates, prog_map, student_major, student_degree):
     candidate_pool = []
     for u in top_candidates:
         u_progs = prog_map.get(u.id, [])
@@ -651,20 +713,27 @@ def _build_candidate_pool(top_candidates, prog_map):
                 "field": field_val
             })
 
+        best_prog = _get_best_program(u_progs, student_major, student_degree)
+
+        tuition_usd = None
+        if best_prog and getattr(best_prog, 'tuition', None) and best_prog.tuition.amount_usd:
+            tuition_usd = best_prog.tuition.amount_usd
+
         candidate_pool.append({
             "name": u.university_name,
             "country": u.country,
             "rank": u.qs_ranking,
-            "tuition": u.yearly_tuition_usd,
+            "tuition": tuition_usd,
             "acceptance_rate": u.acceptance_rate,
             "sample_programs": programs_snippet
         })
     return candidate_pool
 
-def _hydrate_ai_results(raw_unis, top_candidates, prog_map, profile_dict):
+def _hydrate_ai_results(raw_unis, top_candidates, prog_map, profile_dict, scholarship_unis):
     final_universities = []
     top_cand_dict = {u.university_name.lower(): u for u in top_candidates}
     student_major = profile_dict.get('intended_major', '').lower()
+    student_degree = _normalize_degree(profile_dict.get('degree_applying_for', ''))
 
     for ai_u in raw_unis:
         ai_name = ai_u.get("name", "")
@@ -672,17 +741,20 @@ def _hydrate_ai_results(raw_unis, top_candidates, prog_map, profile_dict):
             continue
 
         db_u = top_cand_dict[ai_name.lower()]
+        u_progs = prog_map.get(db_u.id, [])
+        best_prog = _get_best_program(u_progs, student_major, student_degree)
+
         course_url = None
         deadline = None
+        tuition_usd = None
 
-        for prog in prog_map.get(db_u.id, []):
-            prog_search = f"{prog.program_name.lower()} {(prog.specialization.name.lower() if prog.specialization and hasattr(prog.specialization, 'name') else '')}"
-            if student_major and student_major in prog_search:
-                if prog.course_page_url:
-                    course_url = prog.course_page_url
-                if prog.application_deadline:
-                    deadline = prog.application_deadline
-                break
+        if best_prog:
+            if getattr(best_prog, 'course_page_url', None):
+                course_url = best_prog.course_page_url
+            if getattr(best_prog, 'application_deadline', None):
+                deadline = best_prog.application_deadline
+            if getattr(best_prog, 'tuition', None) and best_prog.tuition.amount_usd:
+                tuition_usd = best_prog.tuition.amount_usd
 
         uni_website = db_u.website
         if not uni_website or not isinstance(uni_website, str) or not uni_website.strip():
@@ -694,6 +766,9 @@ def _hydrate_ai_results(raw_unis, top_candidates, prog_map, profile_dict):
         if not deadline:
             deadline = "Verify on official website"
 
+        # Determine scholarship availability purely from DB evidence (normalized lookup)
+        scholarship_available = bool(db_u.university_name.lower() in scholarship_unis)
+
         final_universities.append({
             "university_id":      str(db_u.id),
             "university_name":    db_u.university_name,
@@ -704,11 +779,11 @@ def _hydrate_ai_results(raw_unis, top_candidates, prog_map, profile_dict):
             "admission_chance":   float(ai_u.get("chances", 50)),
             "category":           ai_u.get("category", "TARGET").upper(),
             "world_rank":         db_u.qs_ranking,
-            "scholarship_available": bool(db_u.yearly_tuition_usd == 0 or profile_dict.get('need_scholarship', False)),
+            "scholarship_available": scholarship_available,
             "university_email":   sanitize_url(db_u.admissions_email),
             "university_website": sanitize_url(uni_website),
             "course_page_url":    sanitize_url(course_url),
-            "yearly_tuition_usd": db_u.yearly_tuition_usd,
+            "yearly_tuition_usd": tuition_usd,
             "acceptance_rate":    db_u.acceptance_rate,
             "deadline":           deadline,
             "reason_for_match":   ai_u.get("reason", "Good match for your profile."),
@@ -753,8 +828,20 @@ async def get_university_recommendations(
     if not top_candidates:
         raise HTTPException(status_code=404, detail="No matching universities found in the database for your preferences.")
 
+    # 2.5 Load Scholarship Evidence
+    import re
+    top_cand_names = [u.university_name for u in top_candidates if u.university_name]
+    regex_names = [re.compile(f"^{re.escape(name.strip())}$", re.IGNORECASE) for name in top_cand_names]
+    active_scholarships = await models.Scholarship.find(
+        In(models.Scholarship.university_name, regex_names),
+        models.Scholarship.is_active == True
+    ).to_list()
+    scholarship_unis = {s.university_name.strip().lower() for s in active_scholarships if s.university_name}
+
     # Prepare candidate pool for OpenAI
-    candidate_pool = _build_candidate_pool(top_candidates, prog_map)
+    student_degree = _normalize_degree(profile_dict.get('degree_applying_for', ''))
+    student_major = profile_dict.get('intended_major', '').lower()
+    candidate_pool = _build_candidate_pool(top_candidates, prog_map, student_major, student_degree)
 
     # 3. Build Prompt
     p = profile_dict
@@ -775,66 +862,44 @@ Candidate Pool:
     openai_key = os.getenv("OPENAI_API_KEY", "")
     final_universities = None
 
-    if openai_key:
-        payload = {
-            "model": "gpt-4.1-mini",
-            "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user",   "content": user_message}
-            ],
-            "temperature": 0.2,
-            "response_format": {"type": "json_object"}
-        }
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {openai_key}"
-        }
+    if not openai_key:
+        print("[ERROR] OPENAI_API_KEY is missing.")
+        raise HTTPException(status_code=502, detail="AI Recommendation Service is temporarily unavailable due to configuration error.")
 
-        try:
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                resp = await client.post(OPENAI_API_URL, headers=headers, json=payload)
-            resp.raise_for_status()
+    payload = {
+        "model": "gpt-4.1-mini",
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user",   "content": user_message}
+        ],
+        "temperature": 0.2,
+        "response_format": {"type": "json_object"}
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {openai_key}"
+    }
 
-            content = resp.json()["choices"][0]["message"]["content"]
-            data = json.loads(content)
-            raw_unis = data.get("universities", [])
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(OPENAI_API_URL, headers=headers, json=payload)
+        resp.raise_for_status()
 
-            final_universities = _hydrate_ai_results(raw_unis, top_candidates, prog_map, profile_dict)
-            print(f"[DEBUG] AI returned {len(raw_unis)} unis. Validated & Hydrated {len(final_universities)}.")
+        content = resp.json()["choices"][0]["message"]["content"]
+        data = json.loads(content)
+        raw_unis = data.get("universities", [])
 
-        except httpx.HTTPStatusError as e:
-            print(f"OpenAI request failed with status {e.response.status_code}")
-        except httpx.RequestError as e:
-            print(f"OpenAI network/HTTP error: {e}")
-        except (json.JSONDecodeError, KeyError, ValueError) as e:
-            import traceback
-            traceback.print_exc()
-            print(f"OpenAI parsing/validation error: {e}")
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            print(f"AI recommendation error: {type(e).__name__} - {str(e)}")
+        final_universities = _hydrate_ai_results(raw_unis, top_candidates, prog_map, profile_dict, scholarship_unis)
+        print(f"[DEBUG] AI returned {len(raw_unis)} unis. Validated & Hydrated {len(final_universities)}.")
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"AI recommendation error: {type(e).__name__} - {str(e)}")
+        raise HTTPException(status_code=502, detail="AI Recommendation Service is temporarily unavailable. Please try again later.") from e
 
     if not final_universities:
-        # Graceful fallback: use database-scored candidates
-        print("[DEBUG] Using database fallback for recommendations.")
-        try:
-            raw_unis = []
-            for cand in candidate_pool:
-                raw_unis.append({
-                    "name": cand["name"],
-                    "chances": 60,
-                    "category": "TARGET",
-                    "reason": "Recommended based on your academic profile and database filters."
-                })
-            final_universities = _hydrate_ai_results(raw_unis, top_candidates, prog_map, profile_dict)
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            raise HTTPException(status_code=500, detail="Failed in fallback.") from e
-
-    if not final_universities:
-        raise HTTPException(status_code=500, detail="Failed to generate recommendations. Please try again.")
+        raise HTTPException(status_code=502, detail="AI Recommendation Service returned zero validated results. Please try again.")
 
     # 5. Save Session
     try:

@@ -142,6 +142,38 @@ class TestRecommendationEngineRootCause(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(_normalize_degree("Master of Science"), "master")
         self.assertEqual(_normalize_degree("bachelor of arts"), "bachelor")
 
+    def test_get_best_program(self):
+        from main import _get_best_program
+        p1 = DummyProgram("Computer Science", "Master", "AI", "url1", "d1")
+        p2 = DummyProgram("Computer Science", "Bachelor", "Software", "url2", "d2")
+        p3 = DummyProgram("Data Science", "Master", "Big Data", "url3", "d3")
+        u_progs = [p1, p2, p3]
+
+        # 1. correct degree + correct major
+        best = _get_best_program(u_progs, "computer science", "master")
+        self.assertIsNotNone(best)
+        self.assertEqual(best.degree_level, "Master")
+        self.assertEqual(best.program_name, "Computer Science")
+
+        # 2. correct major + wrong degree (strict fallback rejected)
+        self.assertIsNone(_get_best_program(u_progs, "computer science", "phd"))
+
+        # 3. correct degree + wrong major (strict fallback rejected)
+        self.assertIsNone(_get_best_program(u_progs, "biology", "master"))
+
+        # 4. no relevant program
+        self.assertIsNone(_get_best_program(u_progs, "biology", "phd"))
+
+        # 5. just major match
+        best_maj = _get_best_program(u_progs, "data science", None)
+        self.assertIsNotNone(best_maj)
+        self.assertEqual(best_maj.program_name, "Data Science")
+
+        # 6. just degree match
+        best_deg = _get_best_program(u_progs, None, "bachelor")
+        self.assertIsNotNone(best_deg)
+        self.assertEqual(best_deg.degree_level, "Bachelor")
+
     def test_score_universities(self):
         # University with zero programs does not crash scoring; missing specialization is handled.
         top = _score_universities(self.db_unis, self.prog_map, self.profile_dict)
@@ -155,7 +187,7 @@ class TestRecommendationEngineRootCause(unittest.IsolatedAsyncioTestCase):
     def test_build_candidate_pool(self):
         # Tests candidate pool missing specialization and no programs
         top = _score_universities(self.db_unis, self.prog_map, self.profile_dict)
-        pool = _build_candidate_pool(top, self.prog_map)
+        pool = _build_candidate_pool(top, self.prog_map, "computer science", "master")
         tech = next(p for p in pool if p["name"] == "Tech University")
         self.assertEqual(tech["sample_programs"][0]["field"], "AI")
 
@@ -172,7 +204,7 @@ class TestRecommendationEngineRootCause(unittest.IsolatedAsyncioTestCase):
 
         # Put No Web Uni in top candidates manually
         top_candidates = self.db_unis
-        hydrated = _hydrate_ai_results(ai_raw, top_candidates, self.prog_map, self.profile_dict)
+        hydrated = _hydrate_ai_results(ai_raw, top_candidates, self.prog_map, self.profile_dict, {"tech university"})
 
         # 1. Hallucinated university rejected
         self.assertFalse(any(u["university_name"] == "Hogwarts" for u in hydrated))
@@ -186,16 +218,18 @@ class TestRecommendationEngineRootCause(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(hydrated[0]["university_website"], "https://tech.edu")
         self.assertEqual(hydrated[0]["course_page_url"], "https://tech.edu/cs")
 
+    @patch("main.models.Scholarship")
     @patch("main.models.University")
-    async def test_empty_database_candidates(self, mock_university):
+    async def test_empty_database_candidates(self, mock_university, mock_scholarship):
         mock_university.find.return_value.to_list = AsyncMock(return_value=[])
         with self.assertRaises(HTTPException) as cm:
             await get_university_recommendations(self.profile_mock, self.user_mock)
         self.assertEqual(cm.exception.status_code, 404)
 
+    @patch("main.models.Scholarship")
     @patch("main._load_university_programs")
     @patch("main.models.University")
-    async def test_database_program_load_errors_not_swallowed(self, mock_university, mock_load):
+    async def test_database_program_load_errors_not_swallowed(self, mock_university, mock_load, mock_scholarship):
         # database/program-loading exception becomes a 500 and never reaches OpenAI
         mock_university.find.return_value.to_list = AsyncMock(return_value=self.db_unis)
         mock_load.side_effect = Exception("DB Program Load Error")
@@ -207,12 +241,14 @@ class TestRecommendationEngineRootCause(unittest.IsolatedAsyncioTestCase):
         self.assertIn("error occurred while matching", cm.exception.detail)
 
     @patch.dict('os.environ', {'OPENAI_API_KEY': 'test_key'})
+    @patch("main.models.Scholarship")
     @patch("main.httpx.AsyncClient")
     @patch("main._load_university_programs")
     @patch("main.models.University")
-    async def test_no_valid_ai_results(self, mock_university, mock_load, mock_client):
+    async def test_no_valid_ai_results(self, mock_university, mock_load, mock_client, mock_scholarship):
         # no valid AI results produce the existing controlled error
         mock_university.find.return_value.to_list = AsyncMock(return_value=self.db_unis)
+        mock_scholarship.find.return_value.to_list = AsyncMock(return_value=[])
         mock_load.return_value = self.prog_map
 
         mock_resp = MagicMock()
@@ -228,16 +264,18 @@ class TestRecommendationEngineRootCause(unittest.IsolatedAsyncioTestCase):
 
         with self.assertRaises(HTTPException) as cm:
             await get_university_recommendations(self.profile_mock, self.user_mock)
-        self.assertEqual(cm.exception.status_code, 500)
-        self.assertIn("Failed to generate recommendations", cm.exception.detail)
+        self.assertEqual(cm.exception.status_code, 502)
+        self.assertIn("returned zero validated results", cm.exception.detail)
 
     @patch.dict('os.environ', {'OPENAI_API_KEY': 'test_key'})
+    @patch("main.models.Scholarship")
     @patch("main.httpx.AsyncClient")
     @patch("main._load_university_programs")
     @patch("main.models.University")
-    async def test_http_failure_produces_502(self, mock_university, mock_load, mock_client):
+    async def test_http_failure_produces_502(self, mock_university, mock_load, mock_client, mock_scholarship):
         # HTTP failure produces 502
         mock_university.find.return_value.to_list = AsyncMock(return_value=self.db_unis)
+        mock_scholarship.find.return_value.to_list = AsyncMock(return_value=[])
         mock_load.return_value = self.prog_map
 
         mock_client.return_value.__aenter__.return_value.post = AsyncMock(side_effect=RequestError("Network error"))
@@ -248,13 +286,15 @@ class TestRecommendationEngineRootCause(unittest.IsolatedAsyncioTestCase):
         self.assertIn("temporarily unavailable", cm.exception.detail)
 
     @patch.dict('os.environ', {'OPENAI_API_KEY': 'test_key'})
+    @patch("main.models.Scholarship")
     @patch("main.models.RecommendationSession")
     @patch("main.httpx.AsyncClient")
     @patch("main._load_university_programs")
     @patch("main.models.University")
-    async def test_session_insertion_failure(self, mock_university, mock_load, mock_client, mock_session):
+    async def test_session_insertion_failure(self, mock_university, mock_load, mock_client, mock_session, mock_scholarship):
         # session insertion failure remains a 500 and is not confused with an OpenAI failure
         mock_university.find.return_value.to_list = AsyncMock(return_value=self.db_unis)
+        mock_scholarship.find.return_value.to_list = AsyncMock(return_value=[])
         mock_load.return_value = self.prog_map
 
         mock_resp = MagicMock()
@@ -279,13 +319,15 @@ class TestRecommendationEngineRootCause(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Failed to generate recommendations", cm.exception.detail)
 
     @patch.dict('os.environ', {'OPENAI_API_KEY': 'test_key'})
+    @patch("main.models.Scholarship")
     @patch("main.models.RecommendationSession")
     @patch("main.httpx.AsyncClient")
     @patch("main._load_university_programs")
     @patch("main.models.University")
-    async def test_successful_recommendation(self, mock_university, mock_load, mock_client, mock_session):
+    async def test_successful_recommendation(self, mock_university, mock_load, mock_client, mock_session, mock_scholarship):
         # Test exact output contracts
         mock_university.find.return_value.to_list = AsyncMock(return_value=self.db_unis)
+        mock_scholarship.find.return_value.to_list = AsyncMock(return_value=[])
         mock_load.return_value = self.prog_map
 
         mock_resp = MagicMock()

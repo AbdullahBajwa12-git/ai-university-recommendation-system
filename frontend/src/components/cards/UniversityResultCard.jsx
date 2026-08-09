@@ -206,9 +206,9 @@ const MatchDetailModal = ({ isOpen, onClose, university }) => {
         {/* Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
 
-          {/* Admission Chance */}
+          {/* AI Fit Score */}
           <div className="bg-gray-50 rounded-2xl p-4">
-            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-3">Your Admission Chance</p>
+            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-3">AI Fit Score</p>
             <div className="flex items-center gap-4">
               <CircleProgress value={admission_chance} cfg={cfg} />
               <div className="flex-1">
@@ -443,10 +443,10 @@ const UniversityResultCard = ({
           </p>
         </div>
 
-        {/* ── ADMISSION CHANCE BAR ── */}
+        {/* ── AI FIT SCORE BAR ── */}
         <div className="px-5 sm:px-6 pb-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">Admission Chance</span>
+            <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">AI Fit Score</span>
             <div className="flex items-center gap-2">
               <span className={cn('text-xs font-black', cfg.ring)}>{admission_chance}%</span>
               <span className={cn('text-[9px] font-bold px-2 py-0.5 rounded-full border', cfg.badge)}>{cfg.short}</span>
