@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, model_validator
-from typing import Optional, List, Any, Dict
+from typing import Optional, List, Any, Dict, Literal
 from datetime import datetime
 from uuid import UUID
 from beanie import PydanticObjectId
@@ -325,6 +325,57 @@ class UniversityAdminUpdate(BaseModel):
     @classmethod
     def empty_string_to_none(cls, data: Any) -> Any:
         return _blank_to_none(data)
+
+class TuitionInfoModel(BaseModel):
+    amount: float
+    currency: str = "USD"
+    amount_usd: Optional[float] = None
+    original_amount: Optional[float] = None
+    original_currency: Optional[str] = None
+    fee_period: str = "ANNUAL"
+
+class AdmissionReqsModel(BaseModel):
+    min_cgpa: Optional[float] = None
+    cgpa_scale: Optional[float] = 4.0
+    min_ielts_overall: Optional[float] = None
+    min_toefl: Optional[int] = None
+    min_gre: Optional[int] = None
+    min_gmat: Optional[int] = None
+    min_sat: Optional[int] = None
+    interview_required: Optional[bool] = None
+
+class ProgramAdminCreate(BaseModel):
+    university_id: PydanticObjectId
+    canonical_program_id: PydanticObjectId
+    specialization_id: Optional[PydanticObjectId] = None
+    program_name: str
+    degree_level: Literal["Bachelors", "Masters", "PhD", "Other"]
+    track: Optional[str] = "DEFAULT"
+    study_mode: Optional[str] = "ON_CAMPUS"
+    instruction_language: Optional[str] = "English"
+    duration_months: Optional[int] = None
+    intakes: Optional[List[str]] = []
+    tuition: Optional[TuitionInfoModel] = None
+    admission_requirements: Optional[AdmissionReqsModel] = None
+    course_page_url: Optional[str] = None
+    application_deadline: Optional[str] = None
+
+class ProgramAdminUpdate(BaseModel):
+    university_id: Optional[PydanticObjectId] = None
+    canonical_program_id: Optional[PydanticObjectId] = None
+    specialization_id: Optional[PydanticObjectId] = None
+    program_name: Optional[str] = None
+    degree_level: Optional[Literal["Bachelors", "Masters", "PhD", "Other"]] = None
+    track: Optional[str] = None
+    study_mode: Optional[str] = None
+    instruction_language: Optional[str] = None
+    duration_months: Optional[int] = None
+    intakes: Optional[List[str]] = None
+    tuition: Optional[TuitionInfoModel] = None
+    admission_requirements: Optional[AdmissionReqsModel] = None
+    course_page_url: Optional[str] = None
+    application_deadline: Optional[str] = None
+    is_active: Optional[bool] = None
 
 class CountryOut(BaseModel):
     id: Optional[PydanticObjectId] = None

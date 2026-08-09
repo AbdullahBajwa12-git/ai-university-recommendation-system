@@ -255,8 +255,6 @@ class University(Document):
         indexes = [
             [("country", 1)],
             [("qs_ranking", 1)],
-            [("study_levels", 1)],
-            [("fields", 1)],
             [("yearly_tuition_usd", 1)],
             [("acceptance_rate", 1)],
         ]
@@ -302,6 +300,8 @@ class UniversityProgram(Document):
     dataset_version: Optional[str] = None
     seed_version: Optional[str] = None
     import_timestamp: Optional[str] = None
+
+    is_active: bool = True
 
     class Settings:
         name = "university_programs"

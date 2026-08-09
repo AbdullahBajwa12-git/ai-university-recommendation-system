@@ -299,6 +299,158 @@ async def admin_delete_university(
     await uni.delete()
     return {"message": "University deleted"}
 
+# ── ADMIN: PROGRAM CRUD ──────────────────────────────────────────────────────
+
+@app.get("/api/v1/admin/programs", response_model=List[models.UniversityProgram])
+async def admin_list_programs(
+    university_id: Optional[PydanticObjectId] = None,
+    current_admin: models.User = Depends(auth.get_current_admin),
+):
+    if university_id:
+        programs = await models.UniversityProgram.find(
+            models.UniversityProgram.university.id == university_id,
+            fetch_links=True
+        ).to_list()
+    else:
+        programs = await models.UniversityProgram.find(fetch_links=True).to_list()
+    return programs
+
+@app.get("/api/v1/admin/programs/{program_id}", response_model=models.UniversityProgram)
+async def admin_get_program(
+    program_id: PydanticObjectId,
+    current_admin: models.User = Depends(auth.get_current_admin),
+):
+    prog = await models.UniversityProgram.get(program_id, fetch_links=True)
+    if not prog:
+        raise HTTPException(status_code=404, detail="Program not found")
+    return prog
+
+@app.post("/api/v1/admin/programs", response_model=models.UniversityProgram, status_code=201)
+async def admin_create_program(
+    payload: schemas.ProgramAdminCreate,
+    current_admin: models.User = Depends(auth.get_current_admin),
+):
+    uni = await models.University.get(payload.university_id)
+    if not uni:
+        raise HTTPException(status_code=400, detail="Linked University not found")
+
+    core = await models.CoreProgram.get(payload.canonical_program_id)
+    if not core:
+        raise HTTPException(status_code=400, detail="Linked CoreProgram not found")
+
+    spec = None
+    if payload.specialization_id:
+        spec = await models.Specialization.get(payload.specialization_id, fetch_links=True)
+        if not spec:
+            raise HTTPException(status_code=400, detail="Linked Specialization not found")
+        if spec.core_program.id != core.id:
+            raise HTTPException(status_code=400, detail="Specialization does not belong to the selected CoreProgram")
+
+    duplicate = await models.UniversityProgram.find_one(
+        models.UniversityProgram.university.id == uni.id,
+        models.UniversityProgram.canonical_program.id == core.id,
+        models.UniversityProgram.specialization.id == (spec.id if spec else None),
+        models.UniversityProgram.degree_level == payload.degree_level,
+        models.UniversityProgram.track == payload.track
+    )
+    if duplicate:
+        raise HTTPException(status_code=409, detail="A duplicate UniversityProgram already exists (it may be inactive)")
+
+    data = payload.model_dump(exclude={"university_id", "canonical_program_id", "specialization_id"})
+
+    # Handle optional nested fields
+    if data.get('tuition'):
+        data['tuition'] = models.TuitionInfo(**data['tuition'])
+    if data.get('admission_requirements'):
+        data['admission_requirements'] = models.AdmissionReqs(**data['admission_requirements'])
+
+    prog = models.UniversityProgram(
+        university=uni,
+        canonical_program=core,
+        specialization=spec,
+        **data
+    )
+    await prog.insert()
+    return prog
+
+@app.patch("/api/v1/admin/programs/{program_id}", response_model=models.UniversityProgram)
+async def admin_update_program(
+    program_id: PydanticObjectId,
+    payload: schemas.ProgramAdminUpdate,
+    current_admin: models.User = Depends(auth.get_current_admin),
+):
+    prog = await models.UniversityProgram.get(program_id, fetch_links=True)
+    if not prog:
+        raise HTTPException(status_code=404, detail="Program not found")
+
+    data = payload.model_dump(exclude_unset=True)
+
+    # Handle links
+    if "university_id" in data:
+        uid = data.pop("university_id")
+        if uid:
+            uni = await models.University.get(uid)
+            if not uni:
+                raise HTTPException(status_code=400, detail="Linked University not found")
+            prog.university = uni
+
+    if "canonical_program_id" in data:
+        cid = data.pop("canonical_program_id")
+        if cid:
+            core = await models.CoreProgram.get(cid)
+            if not core:
+                raise HTTPException(status_code=400, detail="Linked CoreProgram not found")
+            prog.canonical_program = core
+
+    if "specialization_id" in data:
+        sid = data.pop("specialization_id")
+        if sid:
+            spec = await models.Specialization.get(sid, fetch_links=True)
+            if not spec:
+                raise HTTPException(status_code=400, detail="Linked Specialization not found")
+            prog.specialization = spec
+        elif sid is None:
+            prog.specialization = None
+
+    if "tuition" in data:
+        tdata = data.pop("tuition")
+        prog.tuition = models.TuitionInfo(**tdata) if tdata else None
+
+    if "admission_requirements" in data:
+        rdata = data.pop("admission_requirements")
+        prog.admission_requirements = models.AdmissionReqs(**rdata) if rdata else None
+
+    for key, value in data.items():
+        setattr(prog, key, value)
+
+    if prog.specialization and prog.specialization.core_program.id != prog.canonical_program.id:
+        raise HTTPException(status_code=400, detail="Specialization does not belong to the selected CoreProgram")
+
+    duplicate = await models.UniversityProgram.find_one(
+        models.UniversityProgram.university.id == prog.university.id,
+        models.UniversityProgram.canonical_program.id == prog.canonical_program.id,
+        models.UniversityProgram.specialization.id == (prog.specialization.id if prog.specialization else None),
+        models.UniversityProgram.degree_level == prog.degree_level,
+        models.UniversityProgram.track == prog.track
+    )
+    if duplicate and duplicate.id != prog.id:
+        raise HTTPException(status_code=409, detail="Update would create a duplicate UniversityProgram (it may be inactive)")
+
+    await prog.save()
+    return prog
+
+@app.delete("/api/v1/admin/programs/{program_id}")
+async def admin_delete_program(
+    program_id: PydanticObjectId,
+    current_admin: models.User = Depends(auth.get_current_admin),
+):
+    prog = await models.UniversityProgram.get(program_id)
+    if not prog:
+        raise HTTPException(status_code=404, detail="Program not found")
+    prog.is_active = False
+    await prog.save()
+    return {"message": "Program deactivated"}
+
 # ── ADMIN: SCHOLARSHIP CRUD ───────────────────────────────────────────────────
 
 @app.get("/api/v1/admin/scholarships", response_model=List[schemas.ScholarshipOut])
@@ -587,6 +739,7 @@ async def _load_university_programs(db_unis) -> dict:
     uni_ids = [u.id for u in db_unis]
     programs = await models.UniversityProgram.find(
         In(models.UniversityProgram.university.id, uni_ids),
+        models.UniversityProgram.is_active != False,
         fetch_links=True
     ).to_list()
 

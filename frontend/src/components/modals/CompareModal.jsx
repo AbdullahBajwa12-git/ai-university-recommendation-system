@@ -6,7 +6,7 @@ const CompareModal = ({ isOpen, onClose, universities }) => {
   if (!isOpen) return null;
 
   const features = [
-    { label: 'Admission Chance', key: 'admission_chance', suffix: '%' },
+    { label: 'AI Fit Score', key: 'admission_chance', suffix: '%' },
     { label: 'World Rank', key: 'world_rank', prefix: '#' },
     { label: 'Country', key: 'country' },
     { label: 'Degree', key: 'degree' },

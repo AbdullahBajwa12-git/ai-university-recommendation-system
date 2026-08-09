@@ -48,7 +48,7 @@ const SOPAnalyzer = () => {
           <p className="text-gray-500 mt-1">Get AI feedback on your SOP's structure, clarity, and impact.</p>
         </div>
         <span className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 border border-blue-200 dark:border-blue-800 rounded-full text-xs font-bold">
-          <Sparkles className="h-3 w-3" /> GPT-4o Intelligence
+          <Sparkles className="h-3 w-3" /> Prototype Demo
         </span>
       </div>
 

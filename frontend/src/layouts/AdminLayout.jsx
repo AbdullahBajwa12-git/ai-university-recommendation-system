@@ -22,6 +22,7 @@ const AdminLayout = () => {
     { name: 'Analytics', path: '/admin', icon: BarChart3 },
     { name: 'Manage Users', path: '/admin/users', icon: Users },
     { name: 'Universities', path: '/admin/universities', icon: BookOpen },
+    { name: 'Programs', path: '/admin/programs', icon: BookOpen },
     { name: 'Scholarships', path: '/admin/scholarships', icon: Award },
   ];
 

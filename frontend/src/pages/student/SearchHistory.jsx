@@ -158,7 +158,7 @@ const SearchHistory = () => {
             doc.text(`${i + 1}. ${uni.university_name} (${uni.country})`, 20, y);
             doc.setFont('helvetica', 'normal');
             doc.text(`Degree: ${uni.degree} - Major: ${uni.major}`, 20, y + 7);
-            doc.text(`Admission Chance: ${uni.admission_chance}%`, 20, y + 14);
+            doc.text(`AI Fit Score: ${uni.admission_chance}%`, 20, y + 14);
             doc.text(`Description: ${uni.description?.slice(0, 80)}...`, 20, y + 21);
             y += 35;
         });
@@ -168,7 +168,7 @@ const SearchHistory = () => {
     const exportToCSV = () => {
         const data = activeResults?.recommended_universities || [];
         if (!data.length) return;
-        const headers = ['University', 'Country', 'Degree', 'Major', 'Admission Chance', 'Rank', 'Website'];
+        const headers = ['University', 'Country', 'Degree', 'Major', 'AI Fit Score', 'Rank', 'Website'];
         const rows = data.map(u => [u.university_name, u.country, u.degree, u.major, u.admission_chance, u.world_rank, u.university_website]);
         const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
         saveAs(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), 'history_universities.csv');

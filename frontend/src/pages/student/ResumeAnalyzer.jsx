@@ -72,7 +72,7 @@ const ResumeAnalyzer = () => {
             
             <h4 className="text-xl font-bold">Upload Resume</h4>
             <p className="text-sm text-muted-foreground mt-2 max-w-xs">
-              PDF or DOCX format. Max size 5MB. Your data is processed securely via OpenAI.
+              PDF or DOCX format. Max size 5MB. (Prototype)
             </p>
 
             <label className="mt-8">

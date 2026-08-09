@@ -64,7 +64,7 @@ const AdmissionPrediction = () => {
               Analyze Probability <ArrowRight className="h-5 w-5" />
             </Button>
             <p className="text-[10px] text-center text-gray-400 mt-3 uppercase tracking-widest font-bold">
-              Powered by Predictive Analytics + GPT-4o
+              Powered by Sample Data
             </p>
           </div>
         </div>

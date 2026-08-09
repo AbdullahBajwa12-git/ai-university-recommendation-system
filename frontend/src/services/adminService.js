@@ -76,6 +76,24 @@ export const adminService = {
     const response = await apiClient.delete(`/admin/scholarships/${id}`);
     return response.data;
   },
+  // ── Programs ──
+  listPrograms: async (uniId) => {
+    const qs = uniId ? `?university_id=${uniId}` : '';
+    const response = await apiClient.get(`/admin/programs${qs}`);
+    return response.data;
+  },
+  createProgram: async (payload) => {
+    const response = await apiClient.post('/admin/programs', payload);
+    return response.data;
+  },
+  updateProgram: async (id, payload) => {
+    const response = await apiClient.patch(`/admin/programs/${id}`, payload);
+    return response.data;
+  },
+  deleteProgram: async (id) => {
+    const response = await apiClient.delete(`/admin/programs/${id}`);
+    return response.data;
+  },
 };
 
 export default adminService;
